@@ -1,5 +1,9 @@
 # ka-clone
 
+> Manages an isolated local gitconfig for cloned repositories.
+
+[![Build Status](https://travis-ci.org/Khan/ka-clone.svg)](https://travis-ci.org/Khan/ka-clone)
+
 ## The problem
 Your devs have both work email addresses and personal ones--and you want to them
 to use their work ones for git commits on internal projects. You may also have
