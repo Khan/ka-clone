@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# A simple commit-msg hook that runs khan-linter's git hook.  Attempts to use
+# a version of khan-linter found in $PATH, if not, falls back to the old style
+# of using a hard-coded path.
+PATH_CMD="_ka-commit-lint"
+OLD_PATH="~/khan/devtools/khan-linter/githook.py"
+
+if type $PATH_CMD >/dev/null 2>&1; then
+  $PATH_CMD "$1"
+elif [ -f $OLD_PATH ]; then
+  $OLD_PATH "$1"
+else
+  echo "Could not find khan-linter in either PATH or default location!"
+  echo "Are you sure it's installed?"
+  echo ""
+  echo "(You can try this commit with the --no-verify option to bypass lint.)"
+fi

@@ -1,0 +1,233 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+import argparse
+import logging
+import os
+import re
+import shutil
+import subprocess
+import sys
+
+DEFAULT_EMAIL = os.environ['USER'] + "@khanacademy.org"
+TEMPLATES_DIR = os.path.join(
+    os.path.dirname(os.path.realpath(__file__)),
+    os.path.pardir,
+    "templates"
+)
+
+
+def _cli_parser():
+    parser = argparse.ArgumentParser(
+        description='Clones and configures a KA repo.',
+        usage=_cli_usage())
+    # positional arguments
+    parser.add_argument('src',
+        help=argparse.SUPPRESS,
+        nargs='?')
+    parser.add_argument('dst',
+        help=argparse.SUPPRESS,
+        nargs='?')
+    # operational changes
+    parser.add_argument('-p', '--protect-master',
+        action='store_true',
+        help='install hooks to protect the master branch')
+    parser.add_argument('--repair',
+        action='store_true',
+        help='attempt to khanify the current directory')
+    # disable functions
+    parser.add_argument('--no-email',
+        action='store_true',
+        help='do not override user.email')
+    parser.add_argument('--no-gitconfig',
+        action='store_true',
+        help='do not link KA gitconfig extras')
+    parser.add_argument('--no-lint',
+        action='store_true',
+        help='do not hook commit-msg linting')
+    parser.add_argument('--no-msg',
+        action='store_true',
+        help='no commit message template')
+    # default values
+    parser.add_argument('--email',
+        help="email address to use (default: %(default)s)",
+        default=DEFAULT_EMAIL)
+    # preferences
+    parser.add_argument('-q', '--quiet',
+        action='store_true',
+        help='silence succcess messages')
+    return parser
+
+
+def _cli_usage():
+    return """
+    %(prog)s          [options...] <src> [dst]
+    %(prog)s --repair [options...]
+    """
+
+
+def _cli_log_step_success(msg):
+    logging.info("-> " + msg)
+
+
+def _cli_log_step_warning(msg):
+    logging.warning("*** " + msg)
+
+
+def die_if_not_valid_git_repo():
+    revparse_retcode = subprocess.call(["git", "rev-parse"])
+    # subprocess.call echos STDERR, so no need to log on error condition
+    if revparse_retcode is not 0:
+        sys.exit(revparse_retcode)
+
+
+def set_email(email=DEFAULT_EMAIL):
+    subprocess.check_call(
+        ['git', 'config', '--local', 'user.email', email]
+    )
+    _cli_log_step_success("Set user.email to {}".format(email))
+
+
+def protect_master():
+    """Copy master protection templates into the git hooks for the repo.
+
+    We copy instead of symlink so that the hooks won't break if this tool
+    moves or is deleted. There is a known trade-off here without being able
+    to force update those hooks, but the increaed robustness should be worth it
+    as those hooks are very simple.
+    """
+    hooks_mapping = [
+        ("no-commit-to-master", "pre-commit"),
+        ("no-push-to-master",   "pre-push")       # @Nolint - alignment
+    ]
+    for script, hook in hooks_mapping:
+        _install_git_hook(script, hook)
+    _cli_log_step_success("Added hooks to protect master branch")
+
+
+def install_commit_linter():
+    _install_git_hook('commit-lint', 'commit-msg')
+    _cli_log_step_success("Added commit-msg linting hook")
+
+
+def _install_git_hook(template_name, hook_name):
+    """Install a template as an executable git hook."""
+    src = os.path.join(TEMPLATES_DIR, template_name)
+    dst = os.path.join(os.getcwd(), ".git", "hooks", hook_name)
+    shutil.copy(src, dst)
+    os.chmod(dst, (os.stat(dst)).st_mode | 0111)  # ensure chmod +x
+
+
+def link_commit_template():
+    """If KA commit message template is installed, link it."""
+    _gitconfig_local_reference(
+        'commit.template',
+        os.path.join('.git_template', 'commit_template'),
+        "commit message template"
+    )
+
+
+def link_gitconfig_extras():
+    """If KA gitconfig is installed, link it."""
+    _gitconfig_local_reference(
+        'include.path',
+        '.gitconfig.khan',
+        "KA gitconfig extras"
+    )
+
+
+def _gitconfig_local_reference(config_key, location, name="reference"):
+    """Configure reference to userdir template, but only if exists."""
+    home = os.path.expanduser("~")  # safe for cross platform
+    tmpl = os.path.join(home, location)
+    if os.path.isfile(tmpl):
+        subprocess.check_call(
+            ['git', 'config', '--local', config_key, tmpl]
+        )
+        _cli_log_step_success("Linked {}".format(name))
+    else:
+        msg = "{} not installed, skipping...".format(name)
+        # ugly hack to get capitalize() to work as desired
+        msg = msg[0].upper() + msg[1:]
+        _cli_log_step_warning(msg)
+
+
+def _clone_repo(src, dst, quiet=False):
+    """Clone a git repository. If dst is None, it will be inferred.
+
+    Returns the path of the cloned repository.
+    """
+    if dst is None:
+        dst = _guess_dst_name(src)
+
+    cmds = ['git', 'clone']
+    # we want the subprocess to be quiet too
+    if quiet:
+        cmds.append('--quiet')
+    cmds.append(src)
+    cmds.append(dst)
+
+    retcode = subprocess.call(cmds)
+    if retcode is not 0:
+        sys.exit(retcode)
+    return dst
+
+
+def _guess_dst_name(src):
+    """Given a repository src, guess the destination name"""
+    # remove any trailing slashes that may be in the URI or path
+    src = src.rstrip("/")
+    # remove the .git file extension if present, because Python stdlib basename
+    # shockingly doesn't support that(!)
+    src = _chomp(src, ".git")
+    # for local filesystem paths, its possible the file base was just ".git" on
+    # its own, that would leave us with a trailing slash, which Python basename
+    # doesn't do the unix-y thing with. so have to manually rstrip that again.
+    src = src.rstrip("/")
+    # *finally*, we can do a normal basename function and expect to get what
+    # we would have gotten from a unix-y tool with basename(str, ".git")
+    base = os.path.basename(src)
+    # then, substitute destination filenames the same way as github:
+    #  - https://github.com/docker/docker/issues/679
+    cleaned = re.sub(r'[^A-Za-z0-9_.-]', '-', base)
+    return cleaned
+
+
+def _chomp(s, sep):
+    """Cut an exact match off the end of a string."""
+    if s.endswith(sep):
+        s = s[:-len(sep)]
+    return s
+
+
+def _cli_process_current_dir(cli_args):
+    die_if_not_valid_git_repo()
+    if not cli_args.no_email:
+        set_email()
+    if not cli_args.no_lint:
+        install_commit_linter()
+    if not cli_args.no_msg:
+        link_commit_template()
+    if not cli_args.no_gitconfig:
+        link_gitconfig_extras()
+    if cli_args.protect_master:
+        protect_master()
+
+if __name__ == '__main__':
+    parser = _cli_parser()
+    args = parser.parse_args()
+
+    logging.basicConfig(format="%(message)s")
+    logging.getLogger().setLevel(logging.ERROR if args.quiet else logging.INFO)
+
+    if args.repair:
+        if args.src or args.dst:
+            parser.error("--repair takes no arguments")
+            # TODO(mroth): allow --repair to take an optional target
+        _cli_process_current_dir(args)
+    else:
+        _dst = _clone_repo(args.src, args.dst, args.quiet)
+        logging.info(
+            "Configuring your cloned git repository with KA defaults..."
+        )
+        os.chdir(_dst)
+        _cli_process_current_dir(args)

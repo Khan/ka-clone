@@ -1,0 +1,6 @@
+This directory contains templates used when cloning/converting repos.
+
+no-commit-to-master and no-push-to-master are very similar to the ones
+originally contained in khan-dotfiles, but have been modified to not check the
+repo name since they are to be selectively installed only in repos where you
+want that protection.
