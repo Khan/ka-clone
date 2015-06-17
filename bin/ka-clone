@@ -82,7 +82,8 @@ def die_if_not_valid_git_repo():
 
 def _default_email():
     try:
-        return subprocess.check_output(["git", "config", "kaclone.email"])
+        kac_email = subprocess.check_output(["git", "config", "kaclone.email"])
+        return kac_email.rstrip()
     except subprocess.CalledProcessError:
         return os.environ['USER'] + "@" + DEFAULT_EMAIL_DOMAIN
 
@@ -209,7 +210,7 @@ def _chomp(s, sep):
 def _cli_process_current_dir(cli_args):
     die_if_not_valid_git_repo()
     if not cli_args.no_email:
-        set_email()
+        set_email(args.email)
     if not cli_args.no_lint:
         install_commit_linter()
     if not cli_args.no_msg:
@@ -232,6 +233,10 @@ if __name__ == '__main__':
             # TODO(mroth): allow --repair to take an optional target
         _cli_process_current_dir(args)
     else:
+        if not args.src:
+            parser.print_help()
+            sys.exit(0)
+
         _dst = _clone_repo(args.src, args.dst, args.quiet)
         logging.info(
             "Configuring your cloned git repository with KA defaults..."

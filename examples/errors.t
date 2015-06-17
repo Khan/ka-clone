@@ -47,3 +47,16 @@ design decision, so those config files can continue to be updated as they have
 in the past, and existing global configurations will work--hence better reverse
 compatibility. Also, the user can find them to manually modify somewhere they
 might expect if they are old-school.)
+
+
+Regression test: providing --email at command line should always have
+precedence over any default email guesses:
+
+  $ ka-clone $REPO repowithcustomemail --email=me@you.com --no-lint --no-gitconfig --no-msg
+  Cloning into 'repowithcustomemail'...
+  .* (re)
+  done.
+  Configuring your cloned git repository with KA defaults...
+  -> Set user.email to me@you.com
+  $ cd repowithcustomemail && git config --local user.email
+  me@you.com
