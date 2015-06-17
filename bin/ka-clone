@@ -8,7 +8,7 @@ import shutil
 import subprocess
 import sys
 
-DEFAULT_EMAIL = os.environ['USER'] + "@khanacademy.org"
+DEFAULT_EMAIL_DOMAIN = "khanacademy.org"
 TEMPLATES_DIR = os.path.join(
     os.path.dirname(os.path.realpath(__file__)),
     os.path.pardir,
@@ -50,7 +50,7 @@ def _cli_parser():
     # default values
     parser.add_argument('--email',
         help="email address to use (default: %(default)s)",
-        default=DEFAULT_EMAIL)
+        default=_default_email())
     # preferences
     parser.add_argument('-q', '--quiet',
         action='store_true',
@@ -80,7 +80,14 @@ def die_if_not_valid_git_repo():
         sys.exit(revparse_retcode)
 
 
-def set_email(email=DEFAULT_EMAIL):
+def _default_email():
+    try:
+        return subprocess.check_output(["git", "config", "kaclone.email"])
+    except subprocess.CalledProcessError:
+        return os.environ['USER'] + "@" + DEFAULT_EMAIL_DOMAIN
+
+
+def set_email(email=_default_email()):
     subprocess.check_call(
         ['git', 'config', '--local', 'user.email', email]
     )
