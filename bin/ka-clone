@@ -124,7 +124,10 @@ def _install_git_hook(template_name, hook_name):
     if not os.path.isdir(hooks_dir):
         os.makedirs(hooks_dir)
     dst = os.path.join(hooks_dir, hook_name)
-    shutil.copyfile(src, dst)
+    # if dst is a symlink, unlink (remove) it first, to avoid overwriting
+    if os.path.islink(dst):
+        os.unlink(dst)
+    shutil.copy(src, dst)
     os.chmod(dst, (os.stat(dst)).st_mode | 0111)  # ensure chmod +x
 
 
