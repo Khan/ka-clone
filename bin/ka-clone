@@ -104,8 +104,9 @@ def protect_master():
     as those hooks are very simple.
     """
     hooks_mapping = [
-        ("no-commit-to-master", "pre-commit"),
-        ("no-push-to-master",   "pre-push")       # @Nolint - alignment
+        ("no-commit-to-master",   "pre-commit"),
+        ("no-push-to-master",     "pre-push"),       # @Nolint - alignment
+        ("no-replay-from-master", "pre-rebase"),     # @Nolint - alignment
     ]
     for script, hook in hooks_mapping:
         _install_git_hook(script, hook)
