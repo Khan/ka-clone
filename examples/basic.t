@@ -3,7 +3,7 @@ SETUP: let us assume a user named fleetwood, and add ka-clone to our PATH:
   $ git init --quiet $CRAMTMP/testrepo
   $ export USER=fleetwood
   $ export REPO=$CRAMTMP/testrepo/.git
-  $ export PATH=$PATH:$TESTDIR/../bin
+  $ export PATH=$TESTDIR/../bin:$PATH
 
 SETUP: we'll also want to mock the HOMEDIR, so we can emulate whether the user
 has certain configuration files installed.
@@ -69,6 +69,7 @@ We can clone repos in a way that pushing to master is protected:
   .git/hooks/commit-msg
   .git/hooks/pre-commit
   .git/hooks/pre-push
+  .git/hooks/pre-rebase
 
 But wait, say you have a repository that has already been cloned, which means
 that it probably doesn't have all the tasty goodness...:
