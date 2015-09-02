@@ -34,8 +34,20 @@ else
    branch_name=`git rev-parse --abbrev-ref HEAD`
 fi
 
+# If there is no origin/master, we can't have a problem, so early-exit.
+# If there's no master, we just exclude checking it.
+if ! git rev-parse origin/master -- >/dev/null 2>&1; then
+   exit 0
+fi
+
+if git rev-parse master -- >/dev/null 2>&1; then
+   not_master=^master
+else
+   not_master=
+fi
+
 will_replay=`git rev-list --pretty=oneline --abbrev-commit ^"$upstream" "$branch" | cut -f1 -d" " | sort`
-will_replay_and_not_in_master=`git rev-list --pretty=oneline --abbrev-commit ^"$upstream" ^master ^origin/master "$branch" | cut -f1 -d" " | sort`
+will_replay_and_not_in_master=`git rev-list --pretty=oneline --abbrev-commit ^"$upstream" $not_master ^origin/master "$branch" | cut -f1 -d" " | sort`
 
 # Each commit is about 7 chars long, so we take just the first 8 commits.
 will_replay_and_in_master=`comm -23 <(echo "$will_replay") <(echo "$will_replay_and_not_in_master") | head -n8 | xargs`
