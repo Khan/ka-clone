@@ -14,6 +14,11 @@ has certain configuration files installed.
   $ echo "git is fun lol" > $HOME/.git_template/commit_template
   $ echo "[monkey]\n\tking = sun wukong" > $HOME/.gitconfig.khan
 
+SETUP: let's assume the user already has personal git setup.
+
+  $ git config --global user.email "fleetwood@gmail.com"
+  $ git config --global user.name "Fleet Wood"
+
 --------------------------------------------------------------------------------
 Using ka-clone from a nonexistent source should throw an intelligent error:
 
