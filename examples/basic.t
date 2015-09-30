@@ -98,3 +98,25 @@ Just like a normal git clone, we allow the destination to be inferred:
   .* (re)
   $ ls
   testrepo
+
+Allow for repairing hooks in git submodules, which store their GIT_DIR elsewhere:
+
+  $ git init --quiet $CRAMTMP/testsubmodule
+  $ (cd $CRAMTMP/testsubmodule && echo "a" > a.txt && git add . && git commit --quiet -m "mock")
+  $ git clone --quiet $REPO parentrepo 2>/dev/null
+  $ cd parentrepo
+  $ git submodule add $CRAMTMP/testsubmodule/.git mysubmodule
+  Cloning into 'mysubmodule'...
+  done.
+  $ cd mysubmodule
+  $ ka-clone --protect-master --repair
+  -> Set user.email to fleetwood@khanacademy.org
+  -> Added commit-msg linting hook
+  -> Linked commit message template
+  -> Linked KA gitconfig extras
+  -> Added hooks to protect master branch
+  $ find ../.git/modules/mysubmodule/hooks -perm -111 -type f ! -name '*.sample'
+  ../.git/modules/mysubmodule/hooks/commit-msg
+  ../.git/modules/mysubmodule/hooks/pre-commit
+  ../.git/modules/mysubmodule/hooks/pre-push
+  ../.git/modules/mysubmodule/hooks/pre-rebase

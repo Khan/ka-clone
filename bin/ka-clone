@@ -104,7 +104,7 @@ def protect_master():
     as those hooks are very simple.
     """
     hooks_mapping = [
-        ("no-commit-to-master",   "pre-commit"),
+        ("no-commit-to-master",   "pre-commit"),     # @Nolint - alignment
         ("no-push-to-master",     "pre-push"),       # @Nolint - alignment
         ("no-replay-from-master", "pre-rebase"),     # @Nolint - alignment
     ]
@@ -118,10 +118,15 @@ def install_commit_linter():
     _cli_log_step_success("Added commit-msg linting hook")
 
 
+def _git_dir():
+    """Retrieve the GIT_DIR from the system."""
+    return subprocess.check_output(["git", "rev-parse", "--git-dir"]).rstrip()
+
+
 def _install_git_hook(template_name, hook_name):
-    """Install a template as an executable git hook."""
+    """Install a template as an executable git hook into the CWD's git repo."""
     src = os.path.join(TEMPLATES_DIR, template_name)
-    hooks_dir = os.path.join(os.getcwd(), ".git", "hooks")
+    hooks_dir = os.path.join(_git_dir(), "hooks")
     if not os.path.isdir(hooks_dir):
         os.makedirs(hooks_dir)
     dst = os.path.join(hooks_dir, hook_name)
