@@ -80,6 +80,31 @@ def die_if_not_valid_git_repo():
         sys.exit(revparse_retcode)
 
 
+def _run_in_main_repo_and_subrepos(cmd):
+    """Run the given command in the main repo and all subrepos.
+
+    This is typically needed with `git config --local`, since local
+    settings are not inherited by submodules.
+
+    Note this is not a perfect fix!, since if new submodules are created
+    after the initial clone, they will not pick up the config setting.
+    We'd have to hook into `git p` for that.  But it's better than nothing!
+    """
+    # We cannot use `git submodule foreach` since the submodules may
+    # not have been checked out yet.
+    all_submodules = subprocess.check_output(
+        ['git', 'submodule', 'status', '--recursive']
+    )
+    all_dirs = [l.split()[1] for l in all_submodules.splitlines()]
+    all_dirs.append('.')      # do the main repo as well!
+
+    for subdir in all_dirs:
+        # For recursive submodules, the directory doesn't exist until we
+        # do a `git submodule checkout` of the containing submodule.
+        if os.path.exists(subdir):
+            subprocess.check_call(cmd, cwd=subdir)
+
+
 def _default_email():
     try:
         kac_email = subprocess.check_output(["git", "config", "kaclone.email"])
@@ -89,7 +114,8 @@ def _default_email():
 
 
 def set_email(email=_default_email()):
-    subprocess.check_call(
+    # We have to run this in subrepos explicitly due to `--local`.
+    _run_in_main_repo_and_subrepos(
         ['git', 'config', '--local', 'user.email', email]
     )
     _cli_log_step_success("Set user.email to {}".format(email))
@@ -156,11 +182,15 @@ def link_gitconfig_extras():
 
 
 def _gitconfig_local_reference(config_key, location, name="reference"):
-    """Configure reference to userdir template, but only if exists."""
+    """Configure reference to userdir template, but only if exists.
+
+    This also updates the gitconfig reference in submodules, since
+    `--local` does not cross submodule boundaries.
+    """
     home = os.path.expanduser("~")  # safe for cross platform
     tmpl = os.path.join(home, location)
     if os.path.isfile(tmpl):
-        subprocess.check_call(
+        _run_in_main_repo_and_subrepos(
             ['git', 'config', '--local', config_key, tmpl]
         )
         _cli_log_step_success("Linked {}".format(name))
@@ -189,6 +219,12 @@ def _clone_repo(src, dst, quiet=False):
     retcode = subprocess.call(cmds)
     if retcode is not 0:
         sys.exit(retcode)
+
+    # Initialize submodules, so we can set configs on them too.
+    retcode = subprocess.call(['git', 'submodule', 'init'], cwd=dst)
+    if retcode is not 0:
+        sys.exit(retcode)
+
     return dst
 
 
@@ -231,6 +267,7 @@ def _cli_process_current_dir(cli_args):
         link_gitconfig_extras()
     if cli_args.protect_master:
         protect_master()
+
 
 if __name__ == '__main__':
     parser = _cli_parser()
