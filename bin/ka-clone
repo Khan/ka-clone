@@ -22,39 +22,39 @@ def _cli_parser():
         usage=_cli_usage())
     # positional arguments
     parser.add_argument('src',
-        help=argparse.SUPPRESS,
-        nargs='?')
+                        help=argparse.SUPPRESS,
+                        nargs='?')
     parser.add_argument('dst',
-        help=argparse.SUPPRESS,
-        nargs='?')
+                        help=argparse.SUPPRESS,
+                        nargs='?')
     # operational changes
     parser.add_argument('-p', '--protect-master',
-        action='store_true',
-        help='install hooks to protect the master branch')
+                        action='store_true',
+                        help='install hooks to protect the master branch')
     parser.add_argument('--repair',
-        action='store_true',
-        help='attempt to khanify the current directory')
+                        action='store_true',
+                        help='attempt to khanify the current directory')
     # disable functions
     parser.add_argument('--no-email',
-        action='store_true',
-        help='do not override user.email')
+                        action='store_true',
+                        help='do not override user.email')
     parser.add_argument('--no-gitconfig',
-        action='store_true',
-        help='do not link KA gitconfig extras')
+                        action='store_true',
+                        help='do not link KA gitconfig extras')
     parser.add_argument('--no-lint',
-        action='store_true',
-        help='do not hook commit-msg linting')
+                        action='store_true',
+                        help='do not hook commit-msg linting')
     parser.add_argument('--no-msg',
-        action='store_true',
-        help='no commit message template')
+                        action='store_true',
+                        help='no commit message template')
     # default values
     parser.add_argument('--email',
-        help="email address to use (default: %(default)s)",
-        default=_default_email())
+                        help="email address to use (default: %(default)s)",
+                        default=_default_email())
     # preferences
     parser.add_argument('-q', '--quiet',
-        action='store_true',
-        help='silence succcess messages')
+                        action='store_true',
+                        help='silence succcess messages')
     return parser
 
 
@@ -129,19 +129,26 @@ def protect_master():
     to force update those hooks, but the increaed robustness should be worth it
     as those hooks are very simple.
     """
-    hooks_mapping = [
-        ("no-commit-to-master",   "pre-commit"),     # @Nolint - alignment
-        ("no-push-to-master",     "pre-push"),       # @Nolint - alignment
-        ("no-replay-from-master", "pre-rebase"),     # @Nolint - alignment
-    ]
-    for script, hook in hooks_mapping:
-        _install_git_hook(script, hook)
+    # NOTE(mdr): These are currently the only pre-commit and pre-rebase hooks,
+    # so it's safe to install them each as the single hook executable. If we
+    # add more pre-commit or pre-rebase hooks later, we'll need to create an
+    # executable that delegates to all of them, like we do for pre-push.
+    _install_git_hook('pre-commit.protect-master', 'pre-commit')
+    _install_git_hook('pre-push.protect-master', 'pre-push.protect-master')
+    _install_git_hook('pre-rebase.protect-master', 'pre-rebase')
+
     _cli_log_step_success("Added hooks to protect master branch")
 
 
-def install_commit_linter():
-    _install_git_hook('commit-lint', 'commit-msg')
-    _cli_log_step_success("Added commit-msg linting hook")
+def install_lint_hooks():
+    # NOTE(mdr): This is currently the only commit-msg hook, so it's safe to
+    #     install it directly as the single commit-msg executable. If we add
+    #     more commit-msg hooks later, we'll need to create an executable that
+    #     delegates to all of them, like we do for pre-push.
+    _install_git_hook('commit-msg.lint', 'commit-msg')
+    _install_git_hook('pre-push.lint', 'pre-push.lint')
+
+    _cli_log_step_success("Added linting hooks")
 
 
 def _git_dir():
@@ -149,13 +156,22 @@ def _git_dir():
     return subprocess.check_output(["git", "rev-parse", "--git-dir"]).rstrip()
 
 
-def _install_git_hook(template_name, hook_name):
+def install_global_git_hooks():
+    """Install git hooks that delegate to other, more specific git hooks."""
+    # NOTE(mdr): This pre-push hook delegates to pre-push.lint and
+    #     pre-push.protect-master, but only if they're installed. If neither is
+    #     installed, then this pre-push hook is a no-op. So, this hook is
+    #     always safe to install, regardless of the ka-clone arguments.
+    _install_git_hook('pre-push', 'pre-push')
+
+
+def _install_git_hook(template_name, destination_name):
     """Install a template as an executable git hook into the CWD's git repo."""
     src = os.path.join(TEMPLATES_DIR, template_name)
     hooks_dir = os.path.join(_git_dir(), "hooks")
     if not os.path.isdir(hooks_dir):
         os.makedirs(hooks_dir)
-    dst = os.path.join(hooks_dir, hook_name)
+    dst = os.path.join(hooks_dir, destination_name)
     # if dst is a symlink, unlink (remove) it first, to avoid overwriting
     if os.path.islink(dst):
         os.unlink(dst)
@@ -260,13 +276,15 @@ def _cli_process_current_dir(cli_args):
     if not cli_args.no_email:
         set_email(args.email)
     if not cli_args.no_lint:
-        install_commit_linter()
+        install_lint_hooks()
     if not cli_args.no_msg:
         link_commit_template()
     if not cli_args.no_gitconfig:
         link_gitconfig_extras()
     if cli_args.protect_master:
         protect_master()
+    install_global_git_hooks()
+
 
 
 if __name__ == '__main__':

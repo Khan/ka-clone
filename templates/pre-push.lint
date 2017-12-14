@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -e
+
+# A pre-push hook to run khan-linter before pushing, and abort if lint fails.
+# For emergencies, you can override this hook by using 'git push --no-verify'.
+
+PATH_CMD="_ka-commit-lint"
+OLD_PATH="$HOME/khan/devtools/khan-linter/githook.py"
+
+if type "$PATH_CMD" >/dev/null 2>&1; then
+    "$PATH_CMD" --hook=pre-push "$@"
+elif [ -f $OLD_PATH ]; then
+    "$OLD_PATH" --hook=pre-push "$@"
+else
+    echo "Could not find khan-linter in either PATH or default location!"
+    echo "Are you sure it's installed?"
+    echo ""
+    echo "(You can try this commit with the --no-verify option to bypass lint.)"
+fi

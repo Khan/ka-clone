@@ -6,7 +6,7 @@
 #
 # For emergencies, you can override this hook by using 'git commit -n'.
 
-# IF YOU UPDATE THESE VARS, be sure to update no-push-to-master as well.
+# IF YOU UPDATE THESE VARS, be sure to update pre-push.protect-master as well.
 # If you want to whitelist other users, just add another "-e <email>".
 SUPERUSERS="-e jenkins@khanacademy.org"
 

@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -e
+
+# Get the path to the directory containing this script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+# Copy STDIN to a variable. (This should be small for this hook!)
+STDIN_CONTENT=`cat`
+
+# Configure "pre-push.*" to resolve to an empty set if there are no matches,
+# instead of the string "pre-push.*".
+shopt -s nullglob
+
+# Execute all pre-push.* handlers.
+for hook_handler in $DIR/pre-push.*; do
+    echo "$STDIN_CONTENT" | "$hook_handler" "$@"
+done
