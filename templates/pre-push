@@ -13,5 +13,10 @@ shopt -s nullglob
 
 # Execute all pre-push.* handlers.
 for hook_handler in $DIR/pre-push.*; do
-    echo "$STDIN_CONTENT" | "$hook_handler" "$@"
+    # Some people have a `pre-push.sample` file that is in `.git/hooks` by
+    # default. Ignore that so that file so that we don't run the sample hook.
+    if [ "`basename "$hook_handler"`" != "pre-push.sample" ]
+    then
+        echo "$STDIN_CONTENT" | "$hook_handler" "$@"
+    fi
 done
