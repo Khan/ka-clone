@@ -136,6 +136,14 @@ def protect_master():
     _install_git_hook('pre-commit.protect-master', 'pre-commit')
     _install_git_hook('pre-push.protect-master', 'pre-push.protect-master')
     _install_git_hook('pre-rebase.protect-master', 'pre-rebase')
+    # Make a note in the local git config -- e.g. git-review-branch uses this
+    # to check if it should allow you to branch off master.
+    # TODO(benkraft): Read this value as a default for the commandline
+    # option, so you don't have to specify it every time you use ka-clone on
+    # this repo.  (And do the same for other CLI flags.)
+    _run_in_main_repo_and_subrepos(
+        ['git', 'config', '--local', 'kaclone.protect-master', 'true']
+    )
 
     _cli_log_step_success("Added hooks to protect master branch")
 
