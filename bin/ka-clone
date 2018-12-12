@@ -245,7 +245,11 @@ def _clone_repo(src, dst, quiet=False):
         sys.exit(retcode)
 
     # Initialize submodules, so we can set configs on them too.
-    retcode = subprocess.call(['git', 'submodule', 'init'], cwd=dst)
+    cmds = ['git', 'submodule']
+    if quiet:
+        cmds.append('--quiet')
+    cmds.extend(['update', '--init', '--recursive'])
+    retcode = subprocess.call(cmds, cwd=dst)
     if retcode is not 0:
         sys.exit(retcode)
 
