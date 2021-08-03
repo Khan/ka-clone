@@ -294,7 +294,6 @@ def _cli_process_current_dir(cli_args):
     install_global_git_hooks()
 
 
-
 if __name__ == '__main__':
     parser = _cli_parser()
     args = parser.parse_args()
