@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -e
+
+# The commit-msg receives one parameter; the pathname to a temporary file
+# containing the user's commit message.
+
+# This script prepends the current branch name to the commit message, which
+# greatly aids in workflows where you are juggling commits from multiple
+# branches, as when managing stacked diffs in the github workflow.
+
+if [ -z "$BRANCHES_TO_SKIP" ]; then
+  BRANCHES_TO_SKIP=(master develop test main)
+fi
+
+BRANCH_NAME=$(git symbolic-ref --short HEAD)
+
+BRANCH_EXCLUDED=$(printf "%s\n" "${BRANCHES_TO_SKIP[@]}" | grep -c "^$BRANCH_NAME$")
+BRANCH_IN_COMMIT=$(grep -c "\[$BRANCH_NAME\]" $1)
+
+if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then 
+  BRANCH_NAME="${BRANCH_NAME//\//\\/}"
+  sed -i.bak -e "1s/^/[$BRANCH_NAME] /" $1
+fi
+
+
+# If you want to lint the commit message as well, uncomment this line
+# . "$(dirname "${BASH_SOURCE[0]}")/commit-msg.lint"

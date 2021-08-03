@@ -153,7 +153,7 @@ def install_lint_hooks():
     #     install it directly as the single commit-msg executable. If we add
     #     more commit-msg hooks later, we'll need to create an executable that
     #     delegates to all of them, like we do for pre-push.
-    _install_git_hook('commit-msg.lint', 'commit-msg')
+    _install_git_hook('commit-msg.lint', 'commit-msg.lint')
     _install_git_hook('pre-push.lint', 'pre-push.lint')
 
     _cli_log_step_success("Added linting hooks")
@@ -171,6 +171,7 @@ def install_global_git_hooks():
     #     installed, then this pre-push hook is a no-op. So, this hook is
     #     always safe to install, regardless of the ka-clone arguments.
     _install_git_hook('pre-push', 'pre-push')
+    _install_git_hook('commit-msg', 'commit-msg')
 
 
 def _install_git_hook(template_name, destination_name):
