@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -e
 
 # This script prepends the current branch name to the commit message, which
 # greatly aids in workflows where you are juggling commits from multiple

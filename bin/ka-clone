@@ -28,13 +28,19 @@ def _cli_parser():
                         help=argparse.SUPPRESS,
                         nargs='?')
     # operational changes
-    parser.add_argument('-p', '--protect-master',
-                        action='store_true',
-                        help='install hooks to protect the master branch')
     parser.add_argument('--repair',
                         action='store_true',
                         help='attempt to khanify the current directory')
-    # disable functions
+    # enable/disable functions
+    parser.add_argument('-p', '--protect-master',
+                        action='store_true',
+                        help='install hooks to protect the master branch')
+    parser.add_argument('--branch-name',
+                        action='store_true',
+                        help='prepend commit-msgs with the current branch name')
+    parser.add_argument('--lint-commit',
+                        action='store_true',
+                        help='hook up commit-msg linting')
     parser.add_argument('--no-email',
                         action='store_true',
                         help='do not override user.email')
@@ -43,7 +49,7 @@ def _cli_parser():
                         help='do not link KA gitconfig extras')
     parser.add_argument('--no-lint',
                         action='store_true',
-                        help='do not hook commit-msg linting')
+                        help='do not hook pre-push linting')
     parser.add_argument('--no-msg',
                         action='store_true',
                         help='no commit message template')
@@ -148,10 +154,9 @@ def protect_master():
     _cli_log_step_success("Added hooks to protect master branch")
 
 
-def install_lint_hooks():
+def install_pre_push_lint_hook():
     _install_git_hook('pre-push.lint', 'pre-push.lint')
-
-    _cli_log_step_success("Added linting hooks")
+    _cli_log_step_success("Added pre-push linting hook")
 
 
 def _git_dir():
@@ -284,13 +289,21 @@ def _cli_process_current_dir(cli_args):
     if not cli_args.no_email:
         set_email(args.email)
     if not cli_args.no_lint:
-        install_lint_hooks()
+        install_pre_push_lint_hook()
     if not cli_args.no_msg:
         link_commit_template()
     if not cli_args.no_gitconfig:
         link_gitconfig_extras()
+
     if cli_args.protect_master:
         protect_master()
+    if cli_args.lint_commit:
+        _install_git_hook('commit-msg.lint', 'commit-msg.lint')
+        _cli_log_step_success("Added commit-msg lint hook")
+    if cli_args.branch_name:
+        _install_git_hook('commit-msg.branch-name', 'commit-msg.branch-name')
+        _cli_log_step_success("Added commit-msg branch-name hook")
+
     install_global_git_hooks()
 
 
