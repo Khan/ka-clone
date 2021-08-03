@@ -4,24 +4,19 @@ set -e
 # The commit-msg receives one parameter; the pathname to a temporary file
 # containing the user's commit message.
 
-# This script prepends the current branch name to the commit message, which
-# greatly aids in workflows where you are juggling commits from multiple
-# branches, as when managing stacked diffs in the github workflow.
+# Get the path to the directory containing this script.
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if [ -z "$BRANCHES_TO_SKIP" ]; then
-  BRANCHES_TO_SKIP=(master develop test main)
-fi
+# Configure "commit-msg.*" to resolve to an empty set if there are no matches,
+# instead of the string "commit-msg.*".
+shopt -s nullglob
 
-BRANCH_NAME=$(git symbolic-ref --short HEAD)
-
-BRANCH_EXCLUDED=$(printf "%s\n" "${BRANCHES_TO_SKIP[@]}" | grep -c "^$BRANCH_NAME$")
-BRANCH_IN_COMMIT=$(grep -c "\[$BRANCH_NAME\]" $1)
-
-if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then 
-  BRANCH_NAME="${BRANCH_NAME//\//\\/}"
-  sed -i.bak -e "1s/^/[$BRANCH_NAME] /" $1
-fi
-
-
-# If you want to lint the commit message as well, uncomment this line
-# . "$(dirname "${BASH_SOURCE[0]}")/commit-msg.lint"
+# Execute all commit-msg.* handlers.
+for hook_handler in $DIR/commit-msg.*; do
+    # Some people have a `commit-msg.sample` file that is in `.git/hooks` by
+    # default. Ignore that so that file so that we don't run the sample hook.
+    if [ "`basename "$hook_handler"`" != "commit-msg.sample" ]
+    then
+        "$hook_handler" "$@"
+    fi
+done
