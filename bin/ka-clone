@@ -35,7 +35,7 @@ def _cli_parser():
     parser.add_argument('-p', '--protect-master',
                         action='store_true',
                         help='install hooks to protect the master branch')
-    parser.add_argument('--branch-name',
+    parser.add_argument('--branch-name-hook',
                         action='store_true',
                         help='prepend commit-msgs with the current branch name')
     parser.add_argument('--lint-commit',
@@ -300,7 +300,7 @@ def _cli_process_current_dir(cli_args):
     if cli_args.lint_commit:
         _install_git_hook('commit-msg.lint', 'commit-msg.lint')
         _cli_log_step_success("Added commit-msg lint hook")
-    if cli_args.branch_name:
+    if cli_args.branch_name_hook:
         _install_git_hook('commit-msg.branch-name', 'commit-msg.branch-name')
         _cli_log_step_success("Added commit-msg branch-name hook")
 
