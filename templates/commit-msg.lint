@@ -1,6 +1,4 @@
 #!/bin/sh
-# NOTE: This linter is disabled by default. If you want to enable it,
-# uncomment the last line of the `commit-msg` hook.
 
 # A simple commit-msg hook that runs khan-linter's git hook.  Attempts to use
 # a version of khan-linter found in $PATH, if not, falls back to the old style
