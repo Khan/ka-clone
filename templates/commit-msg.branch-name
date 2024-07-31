@@ -20,21 +20,22 @@ COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
 # Check if the commit template path is set
 if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
   echo "Using commit template: $COMMIT_TEMPLATE_PATH"
-  echo "COMMIT_MSG: $1"
 
   # Read the commit message file
   COMMIT_MSG=$(cat "$1")
 
-  # Expand the commit template path
-    COMMIT_TEMPLATE_PATH=$(eval echo "$COMMIT_TEMPLATE_PATH")
+  echo "COMMIT_MSG: $1"
 
-    # Read the commit template file
-    if [ -f "$COMMIT_TEMPLATE_PATH" ]; then
-      COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
-    else
-      echo "Commit template file not found at $COMMIT_TEMPLATE_PATH"
-      exit 1
-    fi
+  # Expand the commit template path
+  COMMIT_TEMPLATE_PATH=$(eval echo "$COMMIT_TEMPLATE_PATH")
+
+  # Read the commit template file
+  if [ -f "$COMMIT_TEMPLATE_PATH" ]; then
+    COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
+  else
+    echo "Commit template file not found at $COMMIT_TEMPLATE_PATH"
+    exit 1
+  fi
 
   # Check if the commit message matches the commit template
   if [ "$COMMIT_MSG" = "$COMMIT_TEMPLATE" ]; then
