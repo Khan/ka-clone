@@ -8,12 +8,30 @@ if [ -z "$BRANCHES_TO_SKIP" ]; then
   BRANCHES_TO_SKIP=(master develop test main)
 fi
 
-#testing
 
 BRANCH_NAME=$(git symbolic-ref --short HEAD)
 
 BRANCH_EXCLUDED=$(printf "%s\n" "${BRANCHES_TO_SKIP[@]}" | grep -c "^$BRANCH_NAME$")
 BRANCH_IN_COMMIT=$(grep -c "\[$BRANCH_NAME\]" $1)
+
+# Get the commit template path from git config
+COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
+
+# Check if the commit template path is set
+if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
+  # Read the commit template file
+  COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
+
+  # Read the commit message file
+  COMMIT_MSG=$(cat "$1")
+
+  # Check if the commit message matches the commit template
+  if [ "$COMMIT_MSG" = "$COMMIT_TEMPLATE" ]; then
+    echo "Aborting commit due to default commit message."
+    exit 1
+  fi
+fi
+
 
 if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then
   BRANCH_NAME="${BRANCH_NAME//\//\\/}"
