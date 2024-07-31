@@ -21,8 +21,8 @@ COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
 if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
   echo "Using commit template: $COMMIT_TEMPLATE_PATH"
 
-  # Read the commit message file
-  COMMIT_MSG=$(cat "$1")
+  # Read the commit message file and filter out comment lines and empty lines
+  COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
 
   echo "COMMIT_MSG: $COMMIT_MSG"
 
@@ -31,12 +31,14 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
 
   # Read the commit template file
   if [ -f "$COMMIT_TEMPLATE_PATH" ]; then
-    # Filter out comment lines and empty lines from the commit template
-    COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
+    COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
   else
     echo "Commit template file not found at $COMMIT_TEMPLATE_PATH"
     exit 1
   fi
+
+  # Filter out comment lines and empty lines from the commit template
+  COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
 
   # Check if the commit message matches the commit template
   if [ "$COMMIT_MSG" = "$COMMIT_TEMPLATE" ]; then
@@ -44,7 +46,6 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
     exit 1
   fi
 fi
-
 
 if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then
   BRANCH_NAME="${BRANCH_NAME//\//\\/}"
