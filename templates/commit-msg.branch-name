@@ -31,7 +31,8 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
 
   # Read the commit template file
   if [ -f "$COMMIT_TEMPLATE_PATH" ]; then
-    COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
+    # Filter out comment lines and empty lines from the commit template
+    COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
   else
     echo "Commit template file not found at $COMMIT_TEMPLATE_PATH"
     exit 1
