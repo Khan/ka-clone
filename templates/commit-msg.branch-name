@@ -19,12 +19,8 @@ COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
 
 # Check if the commit template path is set
 if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
-  echo "Using commit template: $COMMIT_TEMPLATE_PATH"
-
   # Read the commit message file and filter out comment lines and empty lines
   COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
-
-  echo "COMMIT_MSG: $COMMIT_MSG"
 
   # Expand the commit template path
   COMMIT_TEMPLATE_PATH=$(eval echo "$COMMIT_TEMPLATE_PATH")
