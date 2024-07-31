@@ -11,6 +11,12 @@
 # that change requires that users also bring down updated code from khan-linter
 # and I'm trying to take a light touch atm.
 
+COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
+
+if [ -z "$COMMIT_MSG" ]; then
+  echo "Aborting commit due to empty commit message."
+  exit 1
+fi
 
 # Get the commit template path from git config
 COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
@@ -25,7 +31,6 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
 
   if [ -n "$COMMIT_TEMPLATE" ]; then
     # Read the commit message file and filter out comment lines and empty lines
-    COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
 
     # Filter out comment lines and empty lines from the commit template
     COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
