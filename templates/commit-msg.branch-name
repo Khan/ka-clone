@@ -24,7 +24,7 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
   # Read the commit message file
   COMMIT_MSG=$(cat "$1")
 
-  echo "COMMIT_MSG: $1"
+  echo "COMMIT_MSG: $COMMIT_MSG"
 
   # Expand the commit template path
   COMMIT_TEMPLATE_PATH=$(eval echo "$COMMIT_TEMPLATE_PATH")
