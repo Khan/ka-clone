@@ -19,6 +19,9 @@ COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
 
 # Check if the commit template path is set
 if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
+  echo "Using commit template: $COMMIT_TEMPLATE_PATH"
+  echo "COMMIT_MSG: $1"
+
   # Read the commit template file
   COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH")
 
