@@ -26,7 +26,6 @@ KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 case "$CURRENT_BRANCH" in
     master|main|next|deploy*)
         echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
-        echo "Make a pull-request or audit to a deploy branch instead: https://khanacademy.org/r/git-at-ka"
         exit 1
         ;;
 esac
@@ -36,7 +35,7 @@ IFS=','
 for branch in $KNOWN_DEPLOY_BRANCHES; do
     if [ "$CURRENT_BRANCH" = "$branch" ]; then
         echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
-        echo "Make a pull-request or audit to a deploy branch instead: https://khanacademy.org/r/git-at-ka"
+        echo "Make a pull-request or audit and land it to this branch instead"
         exit 1
     fi
 done

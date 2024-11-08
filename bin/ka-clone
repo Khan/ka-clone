@@ -144,6 +144,7 @@ def protect_master():
     _install_git_hook('pre-commit.protect-master', 'pre-commit')
     _install_git_hook('pre-push.protect-master', 'pre-push.protect-master')
     _install_git_hook('pre-rebase.protect-master', 'pre-rebase')
+
     # Make a note in the local git config -- e.g. git-review-branch uses this
     # to check if it should allow you to branch off master.
     # TODO(benkraft): Read this value as a default for the commandline
