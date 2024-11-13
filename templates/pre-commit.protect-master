@@ -17,13 +17,24 @@ if git config --get user.email | grep -x "$SUPERUSERS" >/dev/null; then
     exit 0
 fi
 
+        echo "HERE 2"
+
+
 # Get the current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+BLUE='\033[0;34m'
+ULINE='\033[4m'
+
+        echo "HERE 1"
+
 
 # Check if the current branch is `master` or `main`
 case "$CURRENT_BRANCH" in
     master|main)
-        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
+        echo "${RED}FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch.${NC}"
         exit 1
         ;;
 esac
@@ -36,8 +47,8 @@ fi
 # Check if the current branch is protected in mobile or others
 case "$CURRENT_BRANCH" in
     next)
-        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
-        echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
+        echo "${RED}FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch.${NC}"
+        echo "More info: ${BLUE}${ULINE}https://khanacademy.org/r/gitfaq#id-9e3a${NC}"
         exit 1
         ;;
 esac
@@ -49,9 +60,9 @@ KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 IFS=','
 for branch in $KNOWN_DEPLOY_BRANCHES; do
     if [ "$CURRENT_BRANCH" = "$branch" ]; then
-        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
-        echo "Make a pull-request (or audit) and land it to this branch instead"
-        echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
+        echo "${RED}FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
+        echo "Make a pull-request (or audit) and land it to this branch instead.${NC}"
+        echo "More info: ${BLUE}${ULINE}https://khanacademy.org/r/gitfaq#id-9e3a${NC}"
         exit 1
     fi
 done
