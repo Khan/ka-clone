@@ -17,9 +17,6 @@ if git config --get user.email | grep -x "$SUPERUSERS" >/dev/null; then
     exit 0
 fi
 
-        echo "HERE 2"
-
-
 # Get the current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
@@ -27,9 +24,6 @@ RED='\033[0;31m'
 NC='\033[0m' # No Color
 BLUE='\033[0;34m'
 ULINE='\033[4m'
-
-        echo "HERE 1"
-
 
 # Check if the current branch is `master` or `main`
 case "$CURRENT_BRANCH" in
