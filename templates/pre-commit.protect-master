@@ -35,13 +35,8 @@ fi
 
 # Check if we are in the middle of a rebase
 if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
-    echo "Currently in the middle of a rebase."
-    # You can add additional logic here if needed.
     exit 0
 fi
-
-# Get the known deploy branches from the git config (comma-separated list)
-KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 
 # Check if the current branch is protected in mobile or others
 case "$CURRENT_BRANCH" in
@@ -51,6 +46,9 @@ case "$CURRENT_BRANCH" in
         exit 1
         ;;
 esac
+
+# Get the known deploy branches from the git config (comma-separated list)
+KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 
 # Check if the current branch matches any known deploy branches
 IFS=','
