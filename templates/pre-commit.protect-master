@@ -28,8 +28,15 @@ case "$CURRENT_BRANCH" in
         ;;
 esac
 
-# Exit if it's a merge commit
-if [ "$(git rev-list --parents -n 1 HEAD | wc -w)" -gt 2 ]; then
+# Check if we are in the middle of a merge
+if [ -f ".git/MERGE_HEAD" ]; then
+    exit 0
+fi
+
+# Check if we are in the middle of a rebase
+if [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+    echo "Currently in the middle of a rebase."
+    # You can add additional logic here if needed.
     exit 0
 fi
 
