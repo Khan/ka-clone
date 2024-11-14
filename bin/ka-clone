@@ -230,11 +230,10 @@ def _gitconfig_link_template(config_key, location, subpath):
     """
     repo ='current repo' if subpath == '.' else "repo {}".format(subpath)
 
-    tmpl = _expanded_home_path(location)
     existing = _existing_commit_template(subpath)
 
     if existing:
-        if existing == tmpl:
+        if existing == location:
             _cli_log_step_warning(
                 "The commit template is already linked in {}, skipping..."
                 .format(repo)
@@ -247,39 +246,41 @@ def _gitconfig_link_template(config_key, location, subpath):
             )
             return
 
-    if os.path.isfile(tmpl):
-        subprocess.check_call(
-            ['git', 'config', '--local', config_key, tmpl],
-            cwd=subpath
-        )
-        _cli_log_step_success(
-            "Linked commit message template {} in {}".format(tmpl, repo)
-        )
-    else:
-        _cli_log_step_warning(
-            "The commit template {} is not installed, ".format(tmpl) +
-            "so we can't link it, skipping..."
-        )
+    subprocess.check_call(
+        ['git', 'config', '--local', config_key, location],
+        cwd=subpath
+    )
+    _cli_log_step_success(
+        "Linked commit message template {} in {}".format(location, repo)
+    )
 
 
 def link_commit_template():
     """If KA commit message template is installed, link it."""
-    all_dirs = _get_submodule_paths()
-    all_dirs.insert(0, '.')      # do the main repo as well!
-
     _cli_log_step_success(
         "Linking commit message template ~/.git_template/commit_template..."
     )
 
+    tmpl = _expanded_home_path(os.path.join('.git_template', 'commit_template'))
+    if not os.path.isfile(tmpl):
+        _cli_log_step_warning(
+            "The commit template {} is not installed, ".format(tmpl) +
+            "so we can't link it, skipping..."
+        )
+        return
+
+    all_dirs = _get_submodule_paths()
+    all_dirs.insert(0, '.')      # do the main repo as well!
+
     for subdir in all_dirs:
         _gitconfig_link_template(
             'commit.template',
-            os.path.join('.git_template', 'commit_template'),
+            tmpl,
             subdir
         )
 
 
-def _existing_config_includes(cwd):
+def _existing_configs(cwd):
     try:
         incl = subprocess.check_output(
             ["git", "config", "--get-all","--local", "include.path"], cwd=cwd
@@ -305,44 +306,46 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     """
     repo ='current repo' if subpath == '.' else "repo {}".format(subpath)
 
-    tmpl = _expanded_home_path(location)
-    existing = _existing_config_includes(subpath)
+    existing = _existing_configs(subpath)
 
-    if tmpl in existing:
+    if location in existing:
         _cli_log_step_warning(
             "The git config is already included in {}, skipping..."
             .format(repo)
         )
         return
 
+    subprocess.check_call(
+        # Note: --add is used to allow multiple entries
+        ['git', 'config', '--add', '--local', config_key, location],
+        cwd=subpath
+    )
+    _cli_log_step_success(
+        "Included git config {} in {}".format(location, repo)
+    )
 
-    if os.path.isfile(tmpl):
-        subprocess.check_call(
-            # Note: --add is used to allow multiple entries
-            ['git', 'config', '--add', '--local', config_key, tmpl],
-            cwd=subpath
-        )
-        _cli_log_step_success(
-            "Included git config {} in {}".format(tmpl, repo)
-        )
-    else:
-        _cli_log_step_warning(
-            "The git config file {} is not installed, ".format(tmpl) +
-            "so we can't include it, skipping..."
-        )
 
 
 def link_gitconfig_khan():
     """If KA gitconfig is installed, link it."""
+    _cli_log_step_success("Including git config ~/.gitconfig.khan...")
+
+    tmpl = _expanded_home_path('.gitconfig.khan')
+    if not os.path.isfile(tmpl):
+        _cli_log_step_warning(
+            "The git config file {} is not installed, ".format(tmpl) +
+            "so we can't include it, skipping..."
+        )
+        return
+
     all_dirs = _get_submodule_paths()
     all_dirs.insert(0, '.')      # do the main repo as well!
-
-    _cli_log_step_success("Including git config ~/.gitconfig.khan...")
 
     for subdir in all_dirs:
         _gitconfig_link_gitconfig_khan(
             'include.path',
-            '.gitconfig.khan',subdir
+            tmpl,
+            subdir
         )
 
 
