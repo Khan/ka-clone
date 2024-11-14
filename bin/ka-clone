@@ -268,7 +268,7 @@ def link_commit_template():
     all_dirs.insert(0, '.')      # do the main repo as well!
 
     _cli_log_step_success(
-        "Linking commit message template ~/.git_template/commit_template"
+        "Linking commit message template ~/.git_template/commit_template..."
     )
 
     for subdir in all_dirs:
@@ -306,7 +306,7 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     repo ='current repo' if subpath == '.' else "repo {}".format(subpath)
 
     tmpl = _expanded_home_path(location)
-    existing = _existing_commit_template(subpath)
+    existing = _existing_config_includes(subpath)
 
     if tmpl in existing:
         _cli_log_step_warning(
@@ -337,7 +337,7 @@ def link_gitconfig_khan():
     all_dirs = _get_submodule_paths()
     all_dirs.insert(0, '.')      # do the main repo as well!
 
-    _cli_log_step_success("Including git config ~/.gitconfig.khan")
+    _cli_log_step_success("Including git config ~/.gitconfig.khan...")
 
     for subdir in all_dirs:
         _gitconfig_link_gitconfig_khan(
