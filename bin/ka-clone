@@ -213,7 +213,7 @@ def _install_git_hook(template_name, destination_name):
 def _existing_commit_template(cwd):
     try:
         template = subprocess.check_output(
-            ["git", "config", "commit.template"], cwd=cwd
+            ["git", "config", "--local", "commit.template"], cwd=cwd
         ).decode('utf-8')
         return template.strip()
     except subprocess.CalledProcessError:
@@ -254,7 +254,8 @@ def _gitconfig_link_template(config_key, location, subpath):
         )
     else:
         _cli_log_step_warning(
-            "Commit message template {} is not installed, skipping...".format(tmpl)
+            "Commit message template {} is not installed, skipping..."
+            .format(tmpl)
         )
 
 
@@ -301,7 +302,7 @@ def _gitconfig_link_gitconfig_khan(config_key, location, name="reference"):
 
     if tmpl in existing:
         _cli_log_step_success(
-            "Already included .gitconfig.khan in repo {}"
+            "Already included git config {} in repo {}"
             .format(tmpl, subpath)
         )
         return
@@ -314,11 +315,12 @@ def _gitconfig_link_gitconfig_khan(config_key, location, name="reference"):
             cwd=subdir
         )
         _cli_log_step_success(
-            "Included .gitconfig.khan {} in repo {}".format(tmpl, subpath)
+            "Included git config {} in repo {}".format(tmpl, subpath)
         )
     else:
         _cli_log_step_warning(
-            "The config file {} is not installed, so we can't include it, skipping...".format(tmpl)
+            "The git config file {} is not installed, so we can't " +
+            "include it, skipping...".format(tmpl)
         )
 
 
