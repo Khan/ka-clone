@@ -85,6 +85,14 @@ def die_if_not_valid_git_repo():
     if revparse_retcode != 0:
         sys.exit(revparse_retcode)
 
+def _get_submodule_paths():
+    """Return a list of submodule paths."""
+    # We cannot use `git submodule foreach` since the submodules may
+    # not have been checked out yet.
+    all_submodules = subprocess.check_output(
+        ['git', 'submodule', 'status', '--recursive']
+    ).decode('utf-8')
+    return [l.split()[1] for l in all_submodules.splitlines()]
 
 def _run_in_main_repo_and_subrepos(cmd):
     """Run the given command in the main repo and all subrepos.
@@ -96,12 +104,7 @@ def _run_in_main_repo_and_subrepos(cmd):
     after the initial clone, they will not pick up the config setting.
     We'd have to hook into `git p` for that.  But it's better than nothing!
     """
-    # We cannot use `git submodule foreach` since the submodules may
-    # not have been checked out yet.
-    all_submodules = subprocess.check_output(
-        ['git', 'submodule', 'status', '--recursive']
-    ).decode('utf-8')
-    all_dirs = [l.split()[1] for l in all_submodules.splitlines()]
+    all_dirs = _get_submodule_paths()
     all_dirs.append('.')      # do the main repo as well!
 
     for subdir in all_dirs:
@@ -200,26 +203,62 @@ def _install_git_hook(template_name, destination_name):
     shutil.copy(src, dst)
     os.chmod(dst, (os.stat(dst)).st_mode | 0o111)  # ensure chmod +x
 
+def _existing_commit_template(cwd):
+    try:
+        template = subprocess.check_output(
+            ["git", "config", "commit.template"], cwd=cwd
+        ).decode('utf-8')
+        return template.strip()
+    except subprocess.CalledProcessError:
+        return None
+
 
 def link_commit_template():
     """If KA commit message template is installed, link it."""
-    _gitconfig_local_reference(
-        'commit.template',
-        os.path.join('.git_template', 'commit_template'),
-        "commit message template"
-    )
+    all_dirs = _get_submodule_paths()
+    all_dirs.append('.')      # do the main repo as well!
+
+    for subdir in all_dirs:
+        _gitconfig_relative_local_reference(
+            'commit.template',
+            os.path.join('.git_template', 'commit_template'),
+            "commit message template",
+            subdir
+        )
 
 
 def link_gitconfig_extras():
     """If KA gitconfig is installed, link it."""
-    _gitconfig_local_reference(
+    _gitconfig_recursive_local_reference(
         'include.path',
         '.gitconfig.khan',
         "KA gitconfig extras"
     )
+    
 
+def _gitconfig_relative_local_reference(config_key, location, name="reference", subpath):
+    home = os.path.expanduser("~")  # safe for cross platform
+    tmpl = os.path.join(home, location)
 
-def _gitconfig_local_reference(config_key, location, name="reference"):
+    existing = _existing_commit_template(subpath)
+    if existing:
+        if existing == tmpl:
+            _cli_log_step_success("Already linked {} in repo {}".format(name, subpath))
+            return
+        else:
+            _cli_log_step_warning("Repo {} already has a different {} linked. Skipping".format(subpath, name))
+            return
+
+    if os.path.isfile(tmpl):
+        subprocess.check_call( ['git', 'config', '--local', config_key, tmpl], cwd=subdir)
+        _cli_log_step_success("Linked {} in repo {}".format(name, subpath))
+    else:
+        msg = "{} not installed, skipping...".format(name)
+        # ugly hack to get capitalize() to work as desired
+        msg = msg[0].upper() + msg[1:]
+        _cli_log_step_warning(msg)
+
+def _gitconfig_recursive_local_reference(config_key, location, name="reference"):
     """Configure reference to userdir template, but only if exists.
 
     This also updates the gitconfig reference in submodules, since
@@ -227,6 +266,7 @@ def _gitconfig_local_reference(config_key, location, name="reference"):
     """
     home = os.path.expanduser("~")  # safe for cross platform
     tmpl = os.path.join(home, location)
+
     if os.path.isfile(tmpl):
         _run_in_main_repo_and_subrepos(
             ['git', 'config', '--local', config_key, tmpl]
@@ -335,7 +375,7 @@ if __name__ == '__main__':
 
     if args.repair:
         if args.src or args.dst:
-            parser.error("--repair takes no arguments")
+            parser.error("--repair takes no src or dst arguments")
             # TODO(mroth): allow --repair to take an optional target
         _cli_process_current_dir(args)
     else:
