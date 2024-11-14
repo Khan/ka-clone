@@ -42,7 +42,7 @@ def _cli_parser():
                         help='install hooks to protect the master branch')
     parser.add_argument('--branch-name-hook',
                         action='store_true',
-                        help='prepend commit-msgs with the current branch name')
+                        help='prepend commit-msgs with current branch name')
     parser.add_argument('--lint-commit',
                         action='store_true',
                         help='hook up commit-msg linting')
@@ -90,6 +90,7 @@ def die_if_not_valid_git_repo():
     if revparse_retcode != 0:
         sys.exit(revparse_retcode)
 
+
 def _get_submodule_paths():
     """Return a list of submodule paths."""
     # We cannot use `git submodule foreach` since the submodules may
@@ -97,7 +98,7 @@ def _get_submodule_paths():
     all_submodules = subprocess.check_output(
         ['git', 'submodule', 'status', '--recursive']
     ).decode('utf-8')
-    return [l.split()[1] for l in all_submodules.splitlines()]
+    return [line.split()[1] for line in all_submodules.splitlines()]
 
 
 def _run_in_main_repo_and_subrepos(cmd):
@@ -228,7 +229,7 @@ def _gitconfig_link_template(config_key, location, subpath):
     This also updates the commit template reference in first-level submodules,
     since `--local` does not cross submodule boundaries.
     """
-    repo ='current repo' if subpath == '.' else "repo {}".format(subpath)
+    repo = 'current repo' if subpath == '.' else "repo {}".format(subpath)
 
     existing = _existing_commit_template(subpath)
 
@@ -261,7 +262,9 @@ def link_commit_template():
         "Linking commit message template ~/.git_template/commit_template..."
     )
 
-    tmpl = _expanded_home_path(os.path.join('.git_template', 'commit_template'))
+    tmpl = _expanded_home_path(
+        os.path.join('.git_template', 'commit_template'))
+
     if not os.path.isfile(tmpl):
         _cli_log_step_warning(
             "The commit template {} is not installed, ".format(tmpl) +
@@ -283,7 +286,7 @@ def link_commit_template():
 def _existing_configs(cwd):
     try:
         incl = subprocess.check_output(
-            ["git", "config", "--get-all","--local", "include.path"], cwd=cwd
+            ["git", "config", "--get-all", "--local", "include.path"], cwd=cwd
         ).decode('utf-8').strip()
         return (
             [line.strip() for line in incl.splitlines()] if incl else []
@@ -304,7 +307,7 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     This also updates the gitconfig reference in first-level submodules,
     since `--local` does not cross submodule boundaries.
     """
-    repo ='current repo' if subpath == '.' else "repo {}".format(subpath)
+    repo = 'current repo' if subpath == '.' else "repo {}".format(subpath)
 
     existing = _existing_configs(subpath)
 
@@ -323,7 +326,6 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     _cli_log_step_success(
         "Included git config {} in {}".format(location, repo)
     )
-
 
 
 def link_gitconfig_khan():
