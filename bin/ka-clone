@@ -16,6 +16,11 @@ TEMPLATES_DIR = os.path.join(
 )
 
 
+def _expanded_home_path(path):
+    home = os.path.expanduser("~")  # safe for cross platform
+    tmpl = os.path.join(home, path)
+
+
 def _cli_parser():
     parser = argparse.ArgumentParser(
         description='Clones and configures a KA repo.',
@@ -93,6 +98,7 @@ def _get_submodule_paths():
         ['git', 'submodule', 'status', '--recursive']
     ).decode('utf-8')
     return [l.split()[1] for l in all_submodules.splitlines()]
+
 
 def _run_in_main_repo_and_subrepos(cmd):
     """Run the given command in the main repo and all subrepos.
@@ -203,6 +209,7 @@ def _install_git_hook(template_name, destination_name):
     shutil.copy(src, dst)
     os.chmod(dst, (os.stat(dst)).st_mode | 0o111)  # ensure chmod +x
 
+
 def _existing_commit_template(cwd):
     try:
         template = subprocess.check_output(
@@ -213,70 +220,150 @@ def _existing_commit_template(cwd):
         return None
 
 
+def _gitconfig_link_template(config_key, location, subpath):
+    """Configure reference to commit template, but only if the file exists
+    and only if it isn't already set in the repo. We don't want to overwrite
+    anything.
+
+    This also updates the commit template reference in first-level submodules,
+    since `--local` does not cross submodule boundaries.
+    """
+    tmpl = _expanded_home_path(location)
+
+    existing = _existing_commit_template(subpath)
+    if existing:
+        if existing == tmpl:
+            _cli_log_step_success(
+                "Already linked commit message template {} in repo {}"
+                .format(tmpl, subpath)
+            )
+            return
+        else:
+            _cli_log_step_warning("Repo {} already has a commit message " +
+                "template linked ({}), skipping...".format(subpath, existing)
+            )
+            return
+
+    if os.path.isfile(tmpl):
+        subprocess.check_call(
+            ['git', 'config', '--local', config_key, tmpl],
+            cwd=subdir
+        )
+        _cli_log_step_success(
+            "Linked commit message template {} in repo {}".format(tmpl, subpath)
+        )
+    else:
+        _cli_log_step_warning(
+            "Commit message template {} is not installed, skipping...".format(tmpl)
+        )
+
+
 def link_commit_template():
     """If KA commit message template is installed, link it."""
     all_dirs = _get_submodule_paths()
     all_dirs.append('.')      # do the main repo as well!
 
     for subdir in all_dirs:
-        _gitconfig_relative_local_reference(
+        _gitconfig_link_template(
             'commit.template',
             os.path.join('.git_template', 'commit_template'),
-            "commit message template",
             subdir
         )
 
 
-def link_gitconfig_extras():
-    """If KA gitconfig is installed, link it."""
-    _gitconfig_recursive_local_reference(
-        'include.path',
-        '.gitconfig.khan',
-        "KA gitconfig extras"
-    )
-    
+def _existing_config_includes(cwd):
+    try:
+        incl = subprocess.check_output(
+            ["git", "config", "--get-all","--local", "include.path"], cwd=cwd
+        ).decode('utf-8').strip()
+        return (
+            [line.strip() for line in incl.splitlines()] if incl else []
+        )
+    except subprocess.CalledProcessError:
+        return []
 
-def _gitconfig_relative_local_reference(config_key, location, name="reference", subpath):
-    home = os.path.expanduser("~")  # safe for cross platform
-    tmpl = os.path.join(home, location)
+
+def _gitconfig_link_gitconfig_khan(config_key, location, name="reference"):
+    """Configure reference to gitconfig.khan. This adds a new include.path
+    line to the local gitconfig, as opposed to overwriting the existing one.
+    Only do this if the file exists and there isn't already a local
+    include.path set to the same value. Note, this is how git-config
+    works with the include.path option. You can have multiple entries, so
+    we don't have to worry about overwriting existing ones, but it does get
+    tricky if you have two entries that are set to the same value.
+
+    This also updates the gitconfig reference in first-level submodules,
+    since `--local` does not cross submodule boundaries.
+    """
+    tmpl = _expanded_home_path(location)
 
     existing = _existing_commit_template(subpath)
-    if existing:
-        if existing == tmpl:
-            _cli_log_step_success("Already linked {} in repo {}".format(name, subpath))
-            return
-        else:
-            _cli_log_step_warning("Repo {} already has a different {} linked. Skipping".format(subpath, name))
-            return
 
-    if os.path.isfile(tmpl):
-        subprocess.check_call( ['git', 'config', '--local', config_key, tmpl], cwd=subdir)
-        _cli_log_step_success("Linked {} in repo {}".format(name, subpath))
-    else:
-        msg = "{} not installed, skipping...".format(name)
-        # ugly hack to get capitalize() to work as desired
-        msg = msg[0].upper() + msg[1:]
-        _cli_log_step_warning(msg)
-
-def _gitconfig_recursive_local_reference(config_key, location, name="reference"):
-    """Configure reference to userdir template, but only if exists.
-
-    This also updates the gitconfig reference in submodules, since
-    `--local` does not cross submodule boundaries.
-    """
-    home = os.path.expanduser("~")  # safe for cross platform
-    tmpl = os.path.join(home, location)
-
-    if os.path.isfile(tmpl):
-        _run_in_main_repo_and_subrepos(
-            ['git', 'config', '--local', config_key, tmpl]
+    if tmpl in existing:
+        _cli_log_step_success(
+            "Already included .gitconfig.khan in repo {}"
+            .format(tmpl, subpath)
         )
-        _cli_log_step_success("Linked {}".format(name))
+        return
+
+
+    if os.path.isfile(tmpl):
+        subprocess.check_call(
+            # Note: --add is used to allow multiple entries
+            ['git', 'config', '--add', '--local', config_key, tmpl],
+            cwd=subdir
+        )
+        _cli_log_step_success(
+            "Included .gitconfig.khan {} in repo {}".format(tmpl, subpath)
+        )
     else:
-        msg = "{} not installed, skipping...".format(name)
-        # ugly hack to get capitalize() to work as desired
-        msg = msg[0].upper() + msg[1:]
-        _cli_log_step_warning(msg)
+        _cli_log_step_warning(
+            "The config file {} is not installed, so we can't include it, skipping...".format(tmpl)
+        )
+
+
+#     existing = _existing_commit_template(subpath)
+#     if existing:
+#         if existing == tmpl:
+#             _cli_log_step_success("Already linked {} in repo {}".format(name, subpath))
+#             return
+#         else:
+#             _cli_log_step_warning("Repo {} already has a different {} linked. Skipping".format(subpath, name))
+#             return
+#
+#     if os.path.isfile(tmpl):
+#         subprocess.check_call( ['git', 'config', '--local', config_key, tmpl], cwd=subdir)
+#         _cli_log_step_success("Linked {} in repo {}".format(name, subpath))
+#     else:
+#         msg = "{} not installed, skipping...".format(name)
+#         # ugly hack to get capitalize() to work as desired
+#         msg = msg[0].upper() + msg[1:]
+#         _cli_log_step_warning(msg)
+#
+#
+#     if os.path.isfile(tmpl):
+#         _run_in_main_repo_and_subrepos(
+#             ['git', 'config', '--local', config_key, tmpl]
+#         )
+#         _cli_log_step_success("Linked {}".format(name))
+#     else:
+#         msg = "{} not installed, skipping...".format(name)
+#         # ugly hack to get capitalize() to work as desired
+#         msg = msg[0].upper() + msg[1:]
+#         _cli_log_step_warning(msg)
+
+
+def link_gitconfig_khan():
+    """If KA gitconfig is installed, link it."""
+    all_dirs = _get_submodule_paths()
+    all_dirs.append('.')      # do the main repo as well!
+
+    for subdir in all_dirs:
+        _gitconfig_link_gitconfig_khan(
+            'include.path',
+            '.gitconfig.khan',
+            "KA gitconfig extras"
+        )
 
 
 def _clone_repo(src, dst, quiet=False):
@@ -346,7 +433,7 @@ def _cli_process_current_dir(cli_args):
     if not cli_args.no_msg:
         link_commit_template()
     if not cli_args.no_gitconfig:
-        link_gitconfig_extras()
+        link_gitconfig_khan()
 
     if cli_args.protect_master:
         protect_master()
