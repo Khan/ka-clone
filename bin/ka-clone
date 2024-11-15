@@ -156,8 +156,8 @@ def protect_master():
 
     We copy instead of symlink so that the hooks won't break if this tool
     moves or is deleted. There is a known trade-off here without being able
-    to force update those hooks, but the increased robustness should be worth it
-    as those hooks are very simple.
+    to force update those hooks, but the increased robustness should be worth
+    it as those hooks are very simple.
     """
     # NOTE(mdr): These are currently the only pre-commit and pre-rebase hooks,
     # so it's safe to install them each as the single hook executable. If we
@@ -216,7 +216,9 @@ def backup_existing_hooks():
     # would just get messy and potentially cause the same issue.
 
     if not os.path.exists(hooks_dir):
-        _cli_log_step_indented_info("No hooks directory found, skipping backup")
+        _cli_log_step_indented_info(
+            "No hooks directory found, skipping backup"
+        )
     else:
         datetime_str = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         backup_dir = hooks_dir + ".backup_" + datetime_str
@@ -384,7 +386,6 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     _cli_log_step_success(
         "Included git config {} in {}".format(location, repo)
     )
-
 
 
 def link_gitconfig_khan():
