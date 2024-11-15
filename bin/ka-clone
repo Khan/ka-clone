@@ -224,7 +224,7 @@ def backup_existing_hooks():
         # Move, don't copy! See note above
         os.rename(hooks_dir, backup_dir)
         _cli_log_step_indented_info(
-            "Backed up existing hooks to", "{}".format(backup_dir)
+            "Backed up existing hooks to {}".format(backup_dir)
         )
 
     logging.info("")
@@ -292,14 +292,14 @@ def _gitconfig_link_template(config_key, location, subpath):
     if existing:
         if existing == location:
             _cli_log_step_indented_info(
-                "The commit template is already linked in",
-                 "{}, skipping...".format(repo)
+                "The commit template is already linked in the ",
+                "{}, skipping...".format(repo)
             )
             return
         else:
             _cli_log_step_indented_info(
-                "The {} already has a commit message ".format(repo),
-                "template linked ({}), skipping...".format(existing)
+                "The {} already has a commit message template ".format(repo),
+                "linked ({}), skipping...".format(existing)
             )
             return
 
