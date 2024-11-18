@@ -208,11 +208,11 @@ def backup_existing_hooks():
     if not os.path.exists(hooks_dir):
         _cli_log_step_warning("No hooks directory found, skipping backup")
     else:
-        datetime_str = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        datetime_str = datetime.datetime.now().strftime("%Y%m%dT%H%M%S")
         backup_dir = hooks_dir + ".backup_" + datetime_str
 
         # Move, don't copy! See note above
-        shutil.move(hooks_dir, backup_dir)
+        os.rename(hooks_dir, backup_dir)
         _cli_log_step_success(
             "Backed up existing hooks to {}".format(backup_dir)
         )
