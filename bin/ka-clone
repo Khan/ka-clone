@@ -78,12 +78,22 @@ def _cli_usage():
     """
 
 
-def _cli_log_step_success(msg):
+def _cli_log_step_success(msg, *addl_lines):
     logging.info("-> " + msg)
+    for line in addl_lines:
+        logging.info("    " + line)
 
 
-def _cli_log_step_warning(msg):
+def _cli_log_step_warning(msg, *addl_lines):
     logging.warning("*** " + msg)
+    for line in addl_lines:
+        logging.info("    " + line)
+
+
+def _cli_log_step_indented_info(msg, *addl_lines):
+    logging.info("    *** " + msg)
+    for line in addl_lines:
+        logging.info("        " + line)
 
 
 def die_if_not_valid_git_repo():
@@ -146,7 +156,7 @@ def protect_master():
 
     We copy instead of symlink so that the hooks won't break if this tool
     moves or is deleted. There is a known trade-off here without being able
-    to force update those hooks, but the increaed robustness should be worth it
+    to force update those hooks, but the increased robustness should be worth it
     as those hooks are very simple.
     """
     # NOTE(mdr): These are currently the only pre-commit and pre-rebase hooks,
@@ -206,16 +216,18 @@ def backup_existing_hooks():
     # would just get messy and potentially cause the same issue.
 
     if not os.path.exists(hooks_dir):
-        _cli_log_step_warning("No hooks directory found, skipping backup")
+        _cli_log_step_indented_info("No hooks directory found, skipping backup")
     else:
         datetime_str = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
         backup_dir = hooks_dir + ".backup_" + datetime_str
 
         # Move, don't copy! See note above
         os.rename(hooks_dir, backup_dir)
-        _cli_log_step_success(
-            "Backed up existing hooks to {}".format(backup_dir)
+        _cli_log_step_indented_info(
+            "Backed up existing hooks to", "{}".format(backup_dir)
         )
+
+    logging.info("")
 
     os.makedirs(hooks_dir)
     _cli_log_step_success(
@@ -279,14 +291,14 @@ def _gitconfig_link_template(config_key, location, subpath):
 
     if existing:
         if existing == location:
-            _cli_log_step_warning(
-                "The commit template is already linked in {}, skipping..."
-                .format(repo)
+            _cli_log_step_indented_info(
+                "The commit template is already linked in",
+                 "{}, skipping...".format(repo)
             )
             return
         else:
-            _cli_log_step_warning(
-                "The {} already has a commit message ".format(repo) +
+            _cli_log_step_indented_info(
+                "The {} already has a commit message ".format(repo),
                 "template linked ({}), skipping...".format(existing)
             )
             return
@@ -296,7 +308,8 @@ def _gitconfig_link_template(config_key, location, subpath):
         cwd=subpath
     )
     _cli_log_step_success(
-        "Linked commit message template {} in {}".format(location, repo)
+        "Linked commit message template",
+        "{} in {}".format(location, repo)
     )
 
 
@@ -310,9 +323,9 @@ def link_commit_template():
         os.path.join('.git_template', 'commit_template'))
 
     if not os.path.isfile(tmpl):
-        _cli_log_step_warning(
-            "The commit template {} is not installed, ".format(tmpl) +
-            "so we can't link it, skipping..."
+        _cli_log_step_indented_info(
+            "The commit template {}".format(tmpl),
+            "is not installed, so we can't link it, skipping..."
         )
         return
 
@@ -325,6 +338,7 @@ def link_commit_template():
             tmpl,
             subdir
         )
+    logging.info("")
 
 
 def _existing_configs(cwd):
@@ -356,7 +370,7 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     existing = _existing_configs(subpath)
 
     if location in existing:
-        _cli_log_step_warning(
+        _cli_log_step_indented_info(
             "The git config is already included in {}, skipping..."
             .format(repo)
         )
@@ -372,13 +386,14 @@ def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
     )
 
 
+
 def link_gitconfig_khan():
     """If KA gitconfig is installed, link it."""
     _cli_log_step_success("Including git config ~/.gitconfig.khan...")
 
     tmpl = _expanded_home_path('.gitconfig.khan')
     if not os.path.isfile(tmpl):
-        _cli_log_step_warning(
+        _cli_log_step_indented_info(
             "The git config file {} is not installed, ".format(tmpl) +
             "so we can't include it, skipping..."
         )
@@ -393,6 +408,8 @@ def link_gitconfig_khan():
             tmpl,
             subdir
         )
+
+    logging.info("")
 
 
 def _clone_repo(src, dst, quiet=False):
