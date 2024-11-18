@@ -24,7 +24,7 @@ KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 
 # Check if the current branch is protected
 case "$CURRENT_BRANCH" in
-    master|main|next|deploy*)
+    master|main|next)
         echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
         echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
         exit 1
