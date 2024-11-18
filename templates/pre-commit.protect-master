@@ -29,7 +29,7 @@ case "$CURRENT_BRANCH" in
 esac
 
 # Check if we are in the middle of a merge or rebase.
-if [ -f ".git/MERGE_HEAD" -o -d ".git/rebase-merge" -o -d ".git/rebase-apply" ]; then
+if [ -f ".git/MERGE_HEAD" ] || [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
     exit 0
 fi
 
