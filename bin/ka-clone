@@ -189,7 +189,7 @@ def backup_existing_hooks():
     hooks_dir = os.path.join(_git_dir(), "hooks")
 
     # NOTE (Lilli): Why are we doing it this way? Why not just backup each hook
-    # individually? Why not just copy the `hooks` directory? The answer to
+    # individually? Why not just copy the `hooks` directory? The answers to
     # these questions lie in the way our KA global hooks function. Both the
     # ka `commit-msg` and `pre-push` hooks search the `hooks` folder for any
     # other hooks with that start with their name and then runs them. E.g.,
