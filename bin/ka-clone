@@ -163,6 +163,8 @@ def protect_master():
     # so it's safe to install them each as the single hook executable. If we
     # add more pre-commit or pre-rebase hooks later, we'll need to create an
     # executable that delegates to all of them, like we do for pre-push.
+    # NOTE(Lilli): If you are changing this per the comment above, update the
+    # docs found here https://khanacademy.org/r/gitfaq#id-3c30
     _install_git_hook('pre-commit.protect-master', 'pre-commit')
     _install_git_hook('pre-push.protect-master', 'pre-push.protect-master')
     _install_git_hook('pre-rebase.protect-master', 'pre-rebase')
@@ -229,6 +231,10 @@ def backup_existing_hooks():
             "Backed up existing hooks to {}".format(backup_dir)
         )
 
+    _cli_log_step_indented_info(
+        "More info: https://khanacademy.org/r/gitfaq#id-3c30"
+    )
+
     logging.info("")
 
     os.makedirs(hooks_dir)
@@ -243,6 +249,8 @@ def install_global_git_hooks():
     #     pre-push.protect-master, but only if they're installed. If neither is
     #     installed, then this pre-push hook is a no-op. So, this hook is
     #     always safe to install, regardless of the ka-clone arguments.
+    # NOTE(Lilli): If you are changing the global hooks, update the docs
+    # found here https://khanacademy.org/r/gitfaq#id-3c30
     _install_git_hook('pre-push', 'pre-push')
     _install_git_hook('commit-msg', 'commit-msg')
 
