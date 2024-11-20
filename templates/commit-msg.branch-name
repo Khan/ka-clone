@@ -1,8 +1,42 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 # This script prepends the current branch name to the commit message, which
 # greatly aids in workflows where you are juggling commits from multiple
 # branches, as when managing stacked diffs in the github workflow.
+
+# TODO (Lilli): Eventually, rewrite this script to function like commit-msg.lint
+# where it just calls khan-linter with the appropriate flags, and the linter
+# can do the work of checking if the commit message is empty or unchanged (as
+# well as adding the branch-name). For now, I'll leave this as it is, since
+# that change requires that users also bring down updated code from khan-linter
+# and I'm trying to take a light touch atm.
+
+
+# Get the commit template path from git config
+COMMIT_TEMPLATE_PATH=$(git config --get commit.template)
+
+# Check if the commit template path is set
+if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
+  # Expand the commit template path
+  COMMIT_TEMPLATE_PATH="${COMMIT_TEMPLATE_PATH/#\~/$HOME}"
+
+  # Read the commit template file
+  COMMIT_TEMPLATE=$(cat "$COMMIT_TEMPLATE_PATH" 2>/dev/null)
+
+  if [ -n "$COMMIT_TEMPLATE" ]; then
+    # Read the commit message file and filter out comment lines and empty lines
+    COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
+
+    # Filter out comment lines and empty lines from the commit template
+    COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
+
+    # Check if the commit message matches the commit template
+    if [ "$COMMIT_MSG" = "$COMMIT_TEMPLATE" ]; then
+      echo "Aborting commit due to default commit message."
+      exit 1
+    fi
+  fi
+fi
 
 if [ -z "$BRANCHES_TO_SKIP" ]; then
   BRANCHES_TO_SKIP=(master develop test main)
@@ -13,7 +47,7 @@ BRANCH_NAME=$(git symbolic-ref --short HEAD)
 BRANCH_EXCLUDED=$(printf "%s\n" "${BRANCHES_TO_SKIP[@]}" | grep -c "^$BRANCH_NAME$")
 BRANCH_IN_COMMIT=$(grep -c "\[$BRANCH_NAME\]" $1)
 
-if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then 
+if [ -n "$BRANCH_NAME" ] && ! [[ $BRANCH_EXCLUDED -eq 1 ]] && ! [[ $BRANCH_IN_COMMIT -ge 1 ]]; then
   BRANCH_NAME="${BRANCH_NAME//\//\\/}"
   sed -i.bak -e "1s/^/[$BRANCH_NAME] /" $1
 fi
