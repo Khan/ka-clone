@@ -1,8 +1,8 @@
 #!/bin/sh
 
-# A simple pre-commit hook that makes it illegal to commit to master
-# on the repo.  An exception is made for the automated process
-# which is the only thing allowed to merge into master.
+# A simple pre-commit hook that makes it illegal to commit to master (and other
+# deploy/target branches) on the repo.  An exception is made for the automated process
+# which is the only thing allowed to merge into master/etc.
 #
 # For emergencies, you can override this hook by using 'git commit -n'.
 
@@ -10,13 +10,36 @@
 # If you want to whitelist other users, just add another "-e <email>".
 SUPERUSERS="-e jenkins@khanacademy.org"
 
-if git config --get user.email | grep -x $SUPERUSERS >/dev/null; then
+
+# Exit if user email matches a SUPERUSER
+if git config --get user.email | grep -x "$SUPERUSERS" >/dev/null; then
     exit 0
 fi
 
-if [ "`git rev-parse --abbrev-ref HEAD`" = "master" ]; then
-   echo "FATAL ERROR: You cannot commit directly to the master branch."
-   echo "Commit to a deploy branch instead:"
-   echo "    https://khanacademy.org/r/git-at-ka"
-   exit 1
-fi
+# Get the current branch name
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Get the known deploy branches from the git config (comma-separated list)
+KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
+
+# Check if the current branch is protected
+case "$CURRENT_BRANCH" in
+    master|main|next)
+        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
+        echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
+        exit 1
+        ;;
+esac
+
+# Check if the current branch matches any known deploy branches
+IFS=','
+for branch in $KNOWN_DEPLOY_BRANCHES; do
+    if [ "$CURRENT_BRANCH" = "$branch" ]; then
+        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
+        echo "Make a pull-request (or audit) and land it to this branch instead"
+        echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
+        exit 1
+    fi
+done
+
+exit 0
