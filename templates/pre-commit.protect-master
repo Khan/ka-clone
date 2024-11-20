@@ -3,7 +3,7 @@
 # A simple pre-commit hook that makes it illegal to commit to master (and other
 # deploy/target branches) on the repo. One exception is made for the automated process
 # which is the only thing allowed to merge into master/etc. Another exception is made
-# for merge commits only, like if you have conflicts when updating your deploy branch.
+# for merge and rebase commits, like if you have conflicts when updating your deploy branch.
 #
 # For emergencies, you can override this hook by using 'git commit -n'.
 
