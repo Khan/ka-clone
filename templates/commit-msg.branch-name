@@ -11,7 +11,7 @@
 # that change requires that users also bring down updated code from khan-linter
 # and I'm trying to take a light touch atm.
 
-COMMIT_MSG=$(grep -v '^#' "$1" | sed '/^[[:space:]]*$/d')
+COMMIT_MSG=$(sed -e '/^[[:space:]]*$/d' -e '/^#/d' "$1")
 
 if [ -z "$COMMIT_MSG" ]; then
   echo "Aborting commit due to empty commit message."
@@ -33,7 +33,7 @@ if [ -n "$COMMIT_TEMPLATE_PATH" ]; then
     # Read the commit message file and filter out comment lines and empty lines
 
     # Filter out comment lines and empty lines from the commit template
-    COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | grep -v '^#' | sed '/^[[:space:]]*$/d')
+    COMMIT_TEMPLATE=$(echo "$COMMIT_TEMPLATE" | sed -e '/^[[:space:]]*$/d' -e '/^#/d')
 
     # Check if the commit message matches the commit template
     if [ "$COMMIT_MSG" = "$COMMIT_TEMPLATE" ]; then
