@@ -7,6 +7,8 @@ import re
 import shutil
 import subprocess
 import sys
+import datetime
+
 
 DEFAULT_EMAIL_DOMAIN = "khanacademy.org"
 TEMPLATES_DIR = os.path.join(
@@ -177,6 +179,48 @@ def _git_dir():
     return subprocess.check_output(
         ["git", "rev-parse", "--git-dir"]
     ).decode('utf-8').rstrip()
+
+
+def backup_existing_hooks():
+    """Backup existing hooks in the git hooks directory."""
+
+    _cli_log_step_success("Backing up existing hooks...")
+
+    hooks_dir = os.path.join(_git_dir(), "hooks")
+
+    # NOTE (Lilli): Why are we doing it this way? Why not just backup each hook
+    # individually? Why not just copy the `hooks` directory? The answers to
+    # these questions lie in the way our KA global hooks function. Both the
+    # ka `commit-msg` and `pre-push` hooks search the `hooks` folder for any
+    # other hooks with that start with their name and then runs them. E.g.,
+    # `pre-push` runs all hooks found in the `hooks` folder that start with
+    # `pre-push`, such as `pre-push.lint`. This enables us to have ka hooks,
+    # but still allows the developer to add their own hooks. It's possible for
+    # a user to have previously disabled a global ka hook by renaming the file
+    # to `pre-push.disabled` or `commit-msg.disabled`. Or they may just have
+    # other hooks in there that they don't want to run, that start with
+    # `<global-hook-name>.*`. If we copy the folder, then reinstall the global
+    # hooks, those other hooks will get called. If it was the original ka
+    # `pre-push` or `commit-msg` that was disabled, the developer will get into
+    # infinite loop. (Ask me how I know...) Backing up hooks in the folder
+    # would just get messy and potentially cause the same issue.
+
+    if not os.path.exists(hooks_dir):
+        _cli_log_step_warning("No hooks directory found, skipping backup")
+    else:
+        datetime_str = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        backup_dir = hooks_dir + ".backup_" + datetime_str
+
+        # Move, don't copy! See note above
+        os.rename(hooks_dir, backup_dir)
+        _cli_log_step_success(
+            "Backed up existing hooks to {}".format(backup_dir)
+        )
+
+    os.makedirs(hooks_dir)
+    _cli_log_step_success(
+        "Created new hooks directory at {}".format(hooks_dir)
+    )
 
 
 def install_global_git_hooks():
@@ -411,6 +455,9 @@ def _chomp(s, sep):
 
 def _cli_process_current_dir(cli_args):
     die_if_not_valid_git_repo()
+
+    backup_existing_hooks()
+
     if not cli_args.no_email:
         set_email(args.email)
     if not cli_args.no_lint:
