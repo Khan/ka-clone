@@ -1,8 +1,9 @@
 #!/bin/sh
 
 # A simple pre-commit hook that makes it illegal to commit to master (and other
-# deploy/target branches) on the repo.  An exception is made for the automated process
-# which is the only thing allowed to merge into master/etc.
+# deploy/target branches) on the repo. One exception is made for the automated process
+# which is the only thing allowed to merge into master/etc. Another exception is made
+# for merge and rebase commits, like if you have conflicts when updating your deploy branch.
 #
 # For emergencies, you can override this hook by using 'git commit -n'.
 
@@ -19,17 +20,30 @@ fi
 # Get the current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
-# Get the known deploy branches from the git config (comma-separated list)
-KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
-
-# Check if the current branch is protected
+# Check if the current branch is `master` or `main`
 case "$CURRENT_BRANCH" in
-    master|main|next)
+    master|main)
+        echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
+        exit 1
+        ;;
+esac
+
+# Check if we are in the middle of a merge or rebase.
+if [ -f ".git/MERGE_HEAD" ] || [ -d ".git/rebase-merge" ] || [ -d ".git/rebase-apply" ]; then
+    exit 0
+fi
+
+# Check if the current branch is protected in mobile or others
+case "$CURRENT_BRANCH" in
+    next)
         echo "FATAL ERROR: You cannot commit directly to the $CURRENT_BRANCH branch."
         echo "More info: https://khanacademy.org/r/gitfaq#id-9e3a"
         exit 1
         ;;
 esac
+
+# Get the known deploy branches from the git config (comma-separated list)
+KNOWN_DEPLOY_BRANCHES=$(git config --get ka.olc.targetBranches)
 
 # Check if the current branch matches any known deploy branches
 IFS=','
