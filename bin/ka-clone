@@ -39,15 +39,27 @@ def _cli_parser():
                         action='store_true',
                         help='attempt to khanify the current directory')
     # enable/disable functions
-    parser.add_argument('-p', '--protect-master',
+    group_protect_master = parser.add_mutually_exclusive_group()
+    group_protect_master.add_argument('-p', '--protect-master',
                         action='store_true',
                         help='install hooks to protect the master branch')
-    parser.add_argument('--branch-name-hook',
+    group_protect_master.add_argument('--no-protect-master',
+                        action='store_true',
+                        help='do not install hooks to protect the master branch')
+    group_branch_name = parser.add_mutually_exclusive_group()
+    group_branch_name.add_argument('--branch-name-hook',
                         action='store_true',
                         help='prepend commit-msgs with current branch name')
-    parser.add_argument('--lint-commit',
+    group_branch_name.add_argument('--no-branch-name-hook',
+                        action='store_true',
+                        help='do not add hook to prepend commit-msgs with current branch name')
+    group_lint_commit = parser.add_mutually_exclusive_group()
+    group_lint_commit.add_argument('--lint-commit',
                         action='store_true',
                         help='hook up commit-msg linting')
+    group_lint_commit.add_argument('--no-lint-commit',
+                        action='store_true',
+                        help='do not hook up commit-msg linting')
     parser.add_argument('--no-email',
                         action='store_true',
                         help='do not override user.email')
@@ -482,18 +494,22 @@ def _chomp(s, sep):
 def _cli_process_current_dir(cli_args):
     die_if_not_valid_git_repo()
 
-    backup_existing_hooks()
-
     if not cli_args.no_email:
         set_email(args.email)
-    if not cli_args.no_lint:
-        install_pre_push_lint_hook()
+
     if not cli_args.no_msg:
         link_commit_template()
     if not cli_args.no_gitconfig:
         link_gitconfig_khan()
 
-    if cli_args.protect_master:
+    backup_existing_hooks()
+
+    if not cli_args.no_lint:
+        install_pre_push_lint_hook()
+    else:
+        _remove_git_hook('pre-push.lint')
+
+    if cli_args.protect_master or not cli_args.no_protect_master:
         protect_master()
 
     if cli_args.lint_commit:
@@ -502,7 +518,7 @@ def _cli_process_current_dir(cli_args):
     else:
         _remove_git_hook('commit-msg.lint')
 
-    if cli_args.branch_name_hook:
+    if cli_args.branch_name_hook or not cli_args.no_branch_name_hook:
         _install_git_hook('commit-msg.branch-name', 'commit-msg.branch-name')
         _cli_log_step_success("Added commit-msg branch-name hook")
     else:
