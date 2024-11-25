@@ -41,25 +41,29 @@ def _cli_parser():
     # enable/disable functions
     group_protect_master = parser.add_mutually_exclusive_group()
     group_protect_master.add_argument('-p', '--protect-master',
-                        action='store_true',
-                        help='install hooks to protect the master branch')
+                                      action='store_true',
+                                      help='install hooks to protect ' +
+                                           'the master branch')
     group_protect_master.add_argument('--no-protect-master',
-                        action='store_true',
-                        help='do not install hooks to protect the master branch')
+                                      action='store_true',
+                                      help='do not install hooks to ' +
+                                           'protect the master branch')
     group_branch_name = parser.add_mutually_exclusive_group()
     group_branch_name.add_argument('--branch-name-hook',
-                        action='store_true',
-                        help='prepend commit-msgs with current branch name')
+                                   action='store_true',
+                                   help='prepend commit-msgs with ' +
+                                        'current branch name')
     group_branch_name.add_argument('--no-branch-name-hook',
-                        action='store_true',
-                        help='do not add hook to prepend commit-msgs with current branch name')
+                                   action='store_true',
+                                   help='do not add hook to prepend commit-' +
+                                        'msgs with current branch name')
     group_lint_commit = parser.add_mutually_exclusive_group()
     group_lint_commit.add_argument('--lint-commit',
-                        action='store_true',
-                        help='hook up commit-msg linting')
+                                   action='store_true',
+                                   help='hook up commit-msg linting')
     group_lint_commit.add_argument('--no-lint-commit',
-                        action='store_true',
-                        help='do not hook up commit-msg linting')
+                                   action='store_true',
+                                   help='do not hook up commit-msg linting')
     parser.add_argument('--no-email',
                         action='store_true',
                         help='do not override user.email')
