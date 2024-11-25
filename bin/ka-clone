@@ -24,8 +24,6 @@ def _expanded_home_path(path):
 
 
 def _cli_parser():
-
-
     parser = argparse.ArgumentParser(
         description='Clones and configures a KA repo.',
         usage=_cli_usage())
