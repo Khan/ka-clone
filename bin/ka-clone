@@ -24,9 +24,24 @@ def _expanded_home_path(path):
 
 
 def _cli_parser():
+
+
     parser = argparse.ArgumentParser(
         description='Clones and configures a KA repo.',
         usage=_cli_usage())
+    # NOTE(Lilli): Please make sure that the version is always an integer,
+    # and that it stays in sync with the version in the OLC file
+    # https://github.com/Khan/our-lovely-cli/blob/main/cmd/repo-rangers/ranger-version.ts
+    # called KA_CLONE_EXPECTED_VERSION. If you change any of the arguments
+    # listed here, in a way that isn't backwards-compatible with what OLC
+    # is trying to do, please bump the version number here and update OLC
+    # to work correctly with the new args. OLC auto-updates itself, so that
+    # should be all you need to do.
+
+    # version
+    parser.add_argument('--version',
+                        action='version',
+                        version='1')
     # positional arguments
     parser.add_argument('src',
                         help=argparse.SUPPRESS,
@@ -83,7 +98,7 @@ def _cli_parser():
     # preferences
     parser.add_argument('-q', '--quiet',
                         action='store_true',
-                        help='silence succcess messages')
+                        help='silence success messages')
     return parser
 
 
