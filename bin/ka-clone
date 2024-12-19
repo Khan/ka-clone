@@ -44,12 +44,12 @@ def _cli_parser():
                         default=True,
                         help='install hooks to protect the master branch')
     parser.add_argument('--commit-msg-branch-name',
-                        '--branch-name-hook', # old, obsolete name
+                        '--branch-name-hook',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='prepend commit-msgs with current branch name')
     parser.add_argument('--commit-msg-lint',
-                        '--lint-commit', # old, obsolete name
+                        '--lint-commit',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=False,
                         help='hook up commit-msg linting')
@@ -61,12 +61,12 @@ def _cli_parser():
                         default=True,
                         help='link KA gitconfig extras')
     parser.add_argument('--pre-push-lint',
-                        '--lint', # old, obsolete name
+                        '--lint',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='hook up pre-push linting')
     parser.add_argument('--commit-msg-template',
-                        '--msg', # old, obsolete name
+                        '--msg',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='set the khan commit message template')
