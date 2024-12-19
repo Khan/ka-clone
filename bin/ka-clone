@@ -43,11 +43,13 @@ def _cli_parser():
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='install hooks to protect the master branch')
-    parser.add_argument('--branch-name-hook',
+    parser.add_argument('--commit-msg-branch-name',
+                        '--branch-name-hook',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='prepend commit-msgs with current branch name')
-    parser.add_argument('--lint-commit',
+    parser.add_argument('--commit-msg-lint',
+                        '--lint-commit',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=False,
                         help='hook up commit-msg linting')
@@ -58,11 +60,13 @@ def _cli_parser():
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='link KA gitconfig extras')
-    parser.add_argument('--lint',
+    parser.add_argument('--pre-push-lint',
+                        '--lint',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='hook up pre-push linting')
-    parser.add_argument('--msg',
+    parser.add_argument('--commit-msg-template',
+                        '--msg',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
                         help='set the khan commit message template')
@@ -74,7 +78,7 @@ def _cli_parser():
     # preferences
     parser.add_argument('-q', '--quiet',
                         action='store_true',
-                        help='silence succcess messages')
+                        help='silence success messages')
     return parser
 
 
@@ -492,7 +496,7 @@ def _cli_process_current_dir(cli_args):
     if not cli_args.no_email:
         set_email(args.email)
 
-    if cli_args.msg:
+    if cli_args.commit_msg_template:
         link_commit_template()
 
     if cli_args.gitconfig:
@@ -500,17 +504,17 @@ def _cli_process_current_dir(cli_args):
 
     backup_existing_hooks()
 
-    if cli_args.lint:
+    if cli_args.pre_push_lint:
         install_pre_push_lint_hook()
 
     if cli_args.protect_master:
         protect_master()
 
-    if cli_args.lint_commit:
+    if cli_args.commit_msg_lint:
         _install_git_hook('commit-msg.lint', 'commit-msg.lint')
         _cli_log_step_success("Added commit-msg lint hook")
 
-    if cli_args.branch_name_hook:
+    if cli_args.commit_msg_branch_name:
         _install_git_hook('commit-msg.branch-name', 'commit-msg.branch-name')
         _cli_log_step_success("Added commit-msg branch-name hook")
 
