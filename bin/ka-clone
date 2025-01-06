@@ -299,7 +299,6 @@ def run_webapp_make_hooks():
         _cli_log_step_indented_info("Ran make hooks successfully")
 
 
-
 def _remove_git_hook(destination_name):
     """Remove a git hook from the CWD's git repo."""
     hooks_dir = os.path.join(_git_dir(), "hooks")
