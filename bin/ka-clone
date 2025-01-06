@@ -23,6 +23,23 @@ def _expanded_home_path(path):
     return os.path.join(home, path)
 
 
+def _git_dir():
+    """Retrieve the GIT_DIR from the system."""
+    return subprocess.check_output(
+        ["git", "rev-parse", "--git-dir"]
+    ).decode('utf-8').rstrip()
+
+
+def _top_level_dir():
+    """Retrieve the top-level directory of the git repo
+    e.g., '/path/to/webapp' or '/path/to/mobile', even if
+    called from a subdirectory.
+    """
+    return subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"]
+    ).decode('utf-8').rstrip()
+
+
 def _cli_parser():
     parser = argparse.ArgumentParser(
         description='Clones and configures a KA repo.',
@@ -114,6 +131,10 @@ def die_if_not_valid_git_repo():
         sys.exit(revparse_retcode)
 
 
+def is_webapp_repo():
+    return os.path.basename(_top_level_dir()) == "webapp"
+
+
 def _get_submodule_paths():
     """Return a list of submodule paths."""
     # We cannot use `git submodule foreach` since the submodules may
@@ -197,13 +218,6 @@ def install_pre_push_lint_hook():
     _cli_log_step_success("Added pre-push linting hook")
 
 
-def _git_dir():
-    """Retrieve the GIT_DIR from the system."""
-    return subprocess.check_output(
-        ["git", "rev-parse", "--git-dir"]
-    ).decode('utf-8').rstrip()
-
-
 def backup_existing_hooks():
     """Backup existing hooks in the git hooks directory."""
 
@@ -264,6 +278,26 @@ def install_global_git_hooks():
     # found here https://khanacademy.org/r/gitfaq#id-3c30
     _install_git_hook('pre-push', 'pre-push')
     _install_git_hook('commit-msg', 'commit-msg')
+
+
+def run_webapp_make_hooks():
+    _cli_log_step_success("Running make hooks because this repo is webapp...")
+    # Must run in top-level folder, even if this is called in subdirectory
+
+    p = subprocess.Popen(
+        ['make', 'hooks'],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        cwd=_top_level_dir()
+    )
+    out, err = p.communicate()
+
+    if p.returncode != 0:
+        _cli_log_step_indented_info("Failed to run make hooks")
+        _cli_log_step_indented_info("Error: {}".format(err.decode('utf-8')))
+    else:
+        _cli_log_step_indented_info("Ran make hooks successfully")
+
 
 
 def _remove_git_hook(destination_name):
@@ -519,6 +553,9 @@ def _cli_process_current_dir(cli_args):
         _cli_log_step_success("Added commit-msg branch-name hook")
 
     install_global_git_hooks()
+
+    if is_webapp_repo():
+        run_webapp_make_hooks()
 
 
 if __name__ == '__main__':
