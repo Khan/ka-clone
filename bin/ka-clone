@@ -286,7 +286,7 @@ def can_run_make_hooks():
 
 
 def run_make_hooks():
-    _cli_log_step_success("Running make hooks because this repo has make hooks...")
+    _cli_log_step_success("Running make hooks...")
 
     # Must run in top-level folder, even if this is called in subdirectory
     try:
