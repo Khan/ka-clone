@@ -131,10 +131,6 @@ def die_if_not_valid_git_repo():
         sys.exit(revparse_retcode)
 
 
-def is_webapp_repo():
-    return os.path.basename(_top_level_dir()) == "webapp"
-
-
 def _get_submodule_paths():
     """Return a list of submodule paths."""
     # We cannot use `git submodule foreach` since the submodules may
@@ -280,7 +276,12 @@ def install_global_git_hooks():
     _install_git_hook('commit-msg', 'commit-msg')
 
 
-def run_webapp_make_hooks():
+def can_run_make_hooks():
+    if os.path.exists(os.path.join(_top_level_dir(), "Makefile")):
+        return "\nhooks: " in open(os.path.join(_top_level_dir(), "Makefile")).read()
+
+
+def run_make_hooks():
     _cli_log_step_success("Running make hooks because this repo is webapp...")
     # Must run in top-level folder, even if this is called in subdirectory
 
@@ -553,8 +554,8 @@ def _cli_process_current_dir(cli_args):
 
     install_global_git_hooks()
 
-    if is_webapp_repo():
-        run_webapp_make_hooks()
+    if can_run_make_hooks():
+        run_make_hooks()
 
 
 if __name__ == '__main__':
