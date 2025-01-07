@@ -278,27 +278,25 @@ def install_global_git_hooks():
 
 def can_run_make_hooks():
     if os.path.exists(os.path.join(_top_level_dir(), "Makefile")):
-        return ("\nhooks: " in
-                open(os.path.join(_top_level_dir(), "Makefile")).read())
+        with open(os.path.join(_top_level_dir(), "Makefile")) as f:
+            body = f.read()
+            return re.search(r'^hooks:', body, flags=re.MULTILINE)
+
+    return False
 
 
 def run_make_hooks():
-    _cli_log_step_success("Running make hooks because this repo is webapp...")
+    _cli_log_step_success("Running make hooks because this repo has make hooks...")
+
     # Must run in top-level folder, even if this is called in subdirectory
-
-    p = subprocess.Popen(
-        ['make', 'hooks'],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        cwd=_top_level_dir()
-    )
-    out, err = p.communicate()
-
-    if p.returncode != 0:
-        _cli_log_step_indented_info("Failed to run make hooks")
-        _cli_log_step_indented_info("Error: {}".format(err.decode('utf-8')))
-    else:
+    try:
+        subprocess.check_output(['make', 'hooks'],
+                                stderr=subprocess.STDOUT,
+                                cwd=_top_level_dir())
         _cli_log_step_indented_info("Ran make hooks successfully")
+    except subprocess.CalledProcessError as e:
+        _cli_log_step_indented_info("Failed to run make hooks")
+        print("\nError: {}".format(e.output.decode('utf-8')))
 
 
 def _remove_git_hook(destination_name):
