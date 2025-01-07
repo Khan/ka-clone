@@ -7,6 +7,8 @@ import re
 import shutil
 import subprocess
 import sys
+import datetime
+
 
 DEFAULT_EMAIL_DOMAIN = "khanacademy.org"
 TEMPLATES_DIR = os.path.join(
@@ -14,6 +16,28 @@ TEMPLATES_DIR = os.path.join(
     os.path.pardir,
     "templates"
 )
+
+
+def _expanded_home_path(path):
+    home = os.path.expanduser("~")  # safe for cross platform
+    return os.path.join(home, path)
+
+
+def _git_dir():
+    """Retrieve the GIT_DIR from the system."""
+    return subprocess.check_output(
+        ["git", "rev-parse", "--git-dir"]
+    ).decode('utf-8').rstrip()
+
+
+def _top_level_dir():
+    """Retrieve the top-level directory of the git repo
+    e.g., '/path/to/webapp' or '/path/to/mobile', even if
+    called from a subdirectory.
+    """
+    return subprocess.check_output(
+        ["git", "rev-parse", "--show-toplevel"]
+    ).decode('utf-8').rstrip()
 
 
 def _cli_parser():
@@ -33,26 +57,37 @@ def _cli_parser():
                         help='attempt to khanify the current directory')
     # enable/disable functions
     parser.add_argument('-p', '--protect-master',
-                        action='store_true',
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
                         help='install hooks to protect the master branch')
-    parser.add_argument('--branch-name-hook',
-                        action='store_true',
-                        help='prepend commit-msgs with the current branch name')
-    parser.add_argument('--lint-commit',
-                        action='store_true',
+    parser.add_argument('--commit-msg-branch-name',
+                        '--branch-name-hook',  # old, obsolete name
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='prepend commit-msgs with current branch name')
+    parser.add_argument('--commit-msg-lint',
+                        '--lint-commit',  # old, obsolete name
+                        action=argparse.BooleanOptionalAction,
+                        default=False,
                         help='hook up commit-msg linting')
     parser.add_argument('--no-email',
                         action='store_true',
                         help='do not override user.email')
-    parser.add_argument('--no-gitconfig',
-                        action='store_true',
-                        help='do not link KA gitconfig extras')
-    parser.add_argument('--no-lint',
-                        action='store_true',
-                        help='do not hook pre-push linting')
-    parser.add_argument('--no-msg',
-                        action='store_true',
-                        help='no commit message template')
+    parser.add_argument('--gitconfig',
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='link KA gitconfig extras')
+    parser.add_argument('--pre-push-lint',
+                        '--lint',  # old, obsolete name
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='hook up pre-push linting')
+    parser.add_argument('--commit-msg-template',
+                        '--msg',  # old, obsolete name
+                        action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='set the khan commit message template')
+
     # default values
     parser.add_argument('--email',
                         help="email address to use (default: %(default)s)",
@@ -60,7 +95,7 @@ def _cli_parser():
     # preferences
     parser.add_argument('-q', '--quiet',
                         action='store_true',
-                        help='silence succcess messages')
+                        help='silence success messages')
     return parser
 
 
@@ -71,12 +106,22 @@ def _cli_usage():
     """
 
 
-def _cli_log_step_success(msg):
+def _cli_log_step_success(msg, *addl_lines):
     logging.info("-> " + msg)
+    for line in addl_lines:
+        logging.info("    " + line)
 
 
-def _cli_log_step_warning(msg):
+def _cli_log_step_warning(msg, *addl_lines):
     logging.warning("*** " + msg)
+    for line in addl_lines:
+        logging.info("    " + line)
+
+
+def _cli_log_step_indented_info(msg, *addl_lines):
+    logging.info("    *** " + msg)
+    for line in addl_lines:
+        logging.info("        " + line)
 
 
 def die_if_not_valid_git_repo():
@@ -84,6 +129,16 @@ def die_if_not_valid_git_repo():
     # subprocess.call echos STDERR, so no need to log on error condition
     if revparse_retcode != 0:
         sys.exit(revparse_retcode)
+
+
+def _get_submodule_paths():
+    """Return a list of submodule paths."""
+    # We cannot use `git submodule foreach` since the submodules may
+    # not have been checked out yet.
+    all_submodules = subprocess.check_output(
+        ['git', 'submodule', 'status', '--recursive']
+    ).decode('utf-8')
+    return [line.split()[1] for line in all_submodules.splitlines()]
 
 
 def _run_in_main_repo_and_subrepos(cmd):
@@ -96,12 +151,7 @@ def _run_in_main_repo_and_subrepos(cmd):
     after the initial clone, they will not pick up the config setting.
     We'd have to hook into `git p` for that.  But it's better than nothing!
     """
-    # We cannot use `git submodule foreach` since the submodules may
-    # not have been checked out yet.
-    all_submodules = subprocess.check_output(
-        ['git', 'submodule', 'status', '--recursive']
-    ).decode('utf-8')
-    all_dirs = [l.split()[1] for l in all_submodules.splitlines()]
+    all_dirs = _get_submodule_paths()
     all_dirs.append('.')      # do the main repo as well!
 
     for subdir in all_dirs:
@@ -134,13 +184,15 @@ def protect_master():
 
     We copy instead of symlink so that the hooks won't break if this tool
     moves or is deleted. There is a known trade-off here without being able
-    to force update those hooks, but the increaed robustness should be worth it
-    as those hooks are very simple.
+    to force update those hooks, but the increased robustness should be worth
+    it as those hooks are very simple.
     """
     # NOTE(mdr): These are currently the only pre-commit and pre-rebase hooks,
     # so it's safe to install them each as the single hook executable. If we
     # add more pre-commit or pre-rebase hooks later, we'll need to create an
     # executable that delegates to all of them, like we do for pre-push.
+    # NOTE(Lilli): If you are changing this per the comment above, update the
+    # docs found here https://khanacademy.org/r/gitfaq#id-3c30
     _install_git_hook('pre-commit.protect-master', 'pre-commit')
     _install_git_hook('pre-push.protect-master', 'pre-push.protect-master')
     _install_git_hook('pre-rebase.protect-master', 'pre-rebase')
@@ -162,11 +214,54 @@ def install_pre_push_lint_hook():
     _cli_log_step_success("Added pre-push linting hook")
 
 
-def _git_dir():
-    """Retrieve the GIT_DIR from the system."""
-    return subprocess.check_output(
-        ["git", "rev-parse", "--git-dir"]
-    ).decode('utf-8').rstrip()
+def backup_existing_hooks():
+    """Backup existing hooks in the git hooks directory."""
+
+    _cli_log_step_success("Backing up existing hooks...")
+
+    hooks_dir = os.path.join(_git_dir(), "hooks")
+
+    # NOTE (Lilli): Why are we doing it this way? Why not just backup each hook
+    # individually? Why not just copy the `hooks` directory? The answers to
+    # these questions lie in the way our KA global hooks function. Both the
+    # ka `commit-msg` and `pre-push` hooks search the `hooks` folder for any
+    # other hooks with that start with their name and then runs them. E.g.,
+    # `pre-push` runs all hooks found in the `hooks` folder that start with
+    # `pre-push`, such as `pre-push.lint`. This enables us to have ka hooks,
+    # but still allows the developer to add their own hooks. It's possible for
+    # a user to have previously disabled a global ka hook by renaming the file
+    # to `pre-push.disabled` or `commit-msg.disabled`. Or they may just have
+    # other hooks in there that they don't want to run, that start with
+    # `<global-hook-name>.*`. If we copy the folder, then reinstall the global
+    # hooks, those other hooks will get called. If it was the original ka
+    # `pre-push` or `commit-msg` that was disabled, the developer will get into
+    # infinite loop. (Ask me how I know...) Backing up hooks in the folder
+    # would just get messy and potentially cause the same issue.
+
+    if not os.path.exists(hooks_dir):
+        _cli_log_step_indented_info(
+            "No hooks directory found, skipping backup"
+        )
+    else:
+        datetime_str = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+        backup_dir = hooks_dir + ".backup_" + datetime_str
+
+        # Move, don't copy! See note above
+        os.rename(hooks_dir, backup_dir)
+        _cli_log_step_indented_info(
+            "Backed up existing hooks to {}".format(backup_dir)
+        )
+
+    _cli_log_step_indented_info(
+        "More info: https://khanacademy.org/r/gitfaq#id-3c30"
+    )
+
+    logging.info("")
+
+    os.makedirs(hooks_dir)
+    _cli_log_step_success(
+        "Created new hooks directory at {}".format(hooks_dir)
+    )
 
 
 def install_global_git_hooks():
@@ -175,8 +270,33 @@ def install_global_git_hooks():
     #     pre-push.protect-master, but only if they're installed. If neither is
     #     installed, then this pre-push hook is a no-op. So, this hook is
     #     always safe to install, regardless of the ka-clone arguments.
+    # NOTE(Lilli): If you are changing the global hooks, update the docs
+    # found here https://khanacademy.org/r/gitfaq#id-3c30
     _install_git_hook('pre-push', 'pre-push')
     _install_git_hook('commit-msg', 'commit-msg')
+
+
+def can_run_make_hooks():
+    if os.path.exists(os.path.join(_top_level_dir(), "Makefile")):
+        with open(os.path.join(_top_level_dir(), "Makefile")) as f:
+            body = f.read()
+            return re.search(r'^hooks:', body, flags=re.MULTILINE)
+
+    return False
+
+
+def run_make_hooks():
+    _cli_log_step_success("Running make hooks...")
+
+    # Must run in top-level folder, even if this is called in subdirectory
+    try:
+        subprocess.check_output(['make', 'hooks'],
+                                stderr=subprocess.STDOUT,
+                                cwd=_top_level_dir())
+        _cli_log_step_indented_info("Ran make hooks successfully")
+    except subprocess.CalledProcessError as e:
+        _cli_log_step_indented_info("Failed to run make hooks")
+        print("\nError: {}".format(e.output.decode('utf-8')))
 
 
 def _remove_git_hook(destination_name):
@@ -201,42 +321,148 @@ def _install_git_hook(template_name, destination_name):
     os.chmod(dst, (os.stat(dst)).st_mode | 0o111)  # ensure chmod +x
 
 
+def _existing_commit_template(cwd):
+    try:
+        template = subprocess.check_output(
+            ["git", "config", "--local", "commit.template"], cwd=cwd
+        ).decode('utf-8')
+        return template.strip()
+    except subprocess.CalledProcessError:
+        return None
+
+
+def _gitconfig_link_template(config_key, location, subpath):
+    """Configure reference to commit template, but only if the file exists
+    and only if it isn't already set in the repo. We don't want to overwrite
+    anything.
+
+    This also updates the commit template reference in first-level submodules,
+    since `--local` does not cross submodule boundaries.
+    """
+    repo = 'current repo' if subpath == '.' else "repo {}".format(subpath)
+
+    existing = _existing_commit_template(subpath)
+
+    if existing:
+        if existing == location:
+            _cli_log_step_indented_info(
+                "The commit template is already linked in the ",
+                "{}, skipping...".format(repo)
+            )
+            return
+        else:
+            _cli_log_step_indented_info(
+                "The {} already has a commit message template ".format(repo),
+                "linked ({}), skipping...".format(existing)
+            )
+            return
+
+    subprocess.check_call(
+        ['git', 'config', '--local', config_key, location],
+        cwd=subpath
+    )
+    _cli_log_step_success(
+        "Linked commit message template",
+        "{} in {}".format(location, repo)
+    )
+
+
 def link_commit_template():
     """If KA commit message template is installed, link it."""
-    _gitconfig_local_reference(
-        'commit.template',
-        os.path.join('.git_template', 'commit_template'),
-        "commit message template"
+    _cli_log_step_success(
+        "Linking commit message template ~/.git_template/commit_template..."
     )
 
+    tmpl = _expanded_home_path(
+        os.path.join('.git_template', 'commit_template'))
 
-def link_gitconfig_extras():
-    """If KA gitconfig is installed, link it."""
-    _gitconfig_local_reference(
-        'include.path',
-        '.gitconfig.khan',
-        "KA gitconfig extras"
-    )
-
-
-def _gitconfig_local_reference(config_key, location, name="reference"):
-    """Configure reference to userdir template, but only if exists.
-
-    This also updates the gitconfig reference in submodules, since
-    `--local` does not cross submodule boundaries.
-    """
-    home = os.path.expanduser("~")  # safe for cross platform
-    tmpl = os.path.join(home, location)
-    if os.path.isfile(tmpl):
-        _run_in_main_repo_and_subrepos(
-            ['git', 'config', '--local', config_key, tmpl]
+    if not os.path.isfile(tmpl):
+        _cli_log_step_indented_info(
+            "The commit template {}".format(tmpl),
+            "is not installed, so we can't link it, skipping..."
         )
-        _cli_log_step_success("Linked {}".format(name))
-    else:
-        msg = "{} not installed, skipping...".format(name)
-        # ugly hack to get capitalize() to work as desired
-        msg = msg[0].upper() + msg[1:]
-        _cli_log_step_warning(msg)
+        return
+
+    all_dirs = _get_submodule_paths()
+    all_dirs.insert(0, '.')      # do the main repo as well!
+
+    for subdir in all_dirs:
+        _gitconfig_link_template(
+            'commit.template',
+            tmpl,
+            subdir
+        )
+    logging.info("")
+
+
+def _existing_configs(cwd):
+    try:
+        incl = subprocess.check_output(
+            ["git", "config", "--get-all", "--local", "include.path"], cwd=cwd
+        ).decode('utf-8').strip()
+        return (
+            [line.strip() for line in incl.splitlines()] if incl else []
+        )
+    except subprocess.CalledProcessError:
+        return []
+
+
+def _gitconfig_link_gitconfig_khan(config_key, location, subpath):
+    """Configure reference to gitconfig.khan. This adds a new include.path
+    line to the local gitconfig, as opposed to overwriting the existing one.
+    Only do this if the file exists and there isn't already a local
+    include.path set to the same value. Note, this is how git-config
+    works with the include.path option. You can have multiple entries, so
+    we don't have to worry about overwriting existing ones, but it does get
+    tricky if you have two entries that are set to the same value.
+
+    This also updates the gitconfig reference in first-level submodules,
+    since `--local` does not cross submodule boundaries.
+    """
+    repo = 'current repo' if subpath == '.' else "repo {}".format(subpath)
+
+    existing = _existing_configs(subpath)
+
+    if location in existing:
+        _cli_log_step_indented_info(
+            "The git config is already included in {}, skipping..."
+            .format(repo)
+        )
+        return
+
+    subprocess.check_call(
+        # Note: --add is used to allow multiple entries
+        ['git', 'config', '--add', '--local', config_key, location],
+        cwd=subpath
+    )
+    _cli_log_step_success(
+        "Included git config {} in {}".format(location, repo)
+    )
+
+
+def link_gitconfig_khan():
+    """If KA gitconfig is installed, link it."""
+    _cli_log_step_success("Including git config ~/.gitconfig.khan...")
+
+    tmpl = _expanded_home_path('.gitconfig.khan')
+    if not os.path.isfile(tmpl):
+        _cli_log_step_indented_info(
+            "The git config file {} is not installed, ".format(tmpl) +
+            "so we can't include it, skipping..."
+        )
+        return
+
+    all_dirs = _get_submodule_paths()
+    all_dirs.insert(0, '.')      # do the main repo as well!
+
+    for subdir in all_dirs:
+        _gitconfig_link_gitconfig_khan(
+            'include.path',
+            tmpl,
+            subdir
+        )
+
+    logging.info("")
 
 
 def _clone_repo(src, dst, quiet=False):
@@ -299,31 +525,36 @@ def _chomp(s, sep):
 
 def _cli_process_current_dir(cli_args):
     die_if_not_valid_git_repo()
+
     if not cli_args.no_email:
         set_email(args.email)
-    if not cli_args.no_lint:
-        install_pre_push_lint_hook()
-    if not cli_args.no_msg:
+
+    if cli_args.commit_msg_template:
         link_commit_template()
-    if not cli_args.no_gitconfig:
-        link_gitconfig_extras()
+
+    if cli_args.gitconfig:
+        link_gitconfig_khan()
+
+    backup_existing_hooks()
+
+    if cli_args.pre_push_lint:
+        install_pre_push_lint_hook()
 
     if cli_args.protect_master:
         protect_master()
 
-    if cli_args.lint_commit:
+    if cli_args.commit_msg_lint:
         _install_git_hook('commit-msg.lint', 'commit-msg.lint')
         _cli_log_step_success("Added commit-msg lint hook")
-    else:
-        _remove_git_hook('commit-msg.lint')
 
-    if cli_args.branch_name_hook:
+    if cli_args.commit_msg_branch_name:
         _install_git_hook('commit-msg.branch-name', 'commit-msg.branch-name')
         _cli_log_step_success("Added commit-msg branch-name hook")
-    else:
-        _remove_git_hook('commit-msg.branch-name')
 
     install_global_git_hooks()
+
+    if can_run_make_hooks():
+        run_make_hooks()
 
 
 if __name__ == '__main__':
@@ -335,7 +566,7 @@ if __name__ == '__main__':
 
     if args.repair:
         if args.src or args.dst:
-            parser.error("--repair takes no arguments")
+            parser.error("--repair takes no src or dst arguments")
             # TODO(mroth): allow --repair to take an optional target
         _cli_process_current_dir(args)
     else:
