@@ -278,7 +278,8 @@ def install_global_git_hooks():
 
 def can_run_make_hooks():
     if os.path.exists(os.path.join(_top_level_dir(), "Makefile")):
-        return "\nhooks: " in open(os.path.join(_top_level_dir(), "Makefile")).read()
+        return ("\nhooks: " in
+                open(os.path.join(_top_level_dir(), "Makefile")).read())
 
 
 def run_make_hooks():
