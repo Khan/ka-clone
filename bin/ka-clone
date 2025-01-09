@@ -169,7 +169,7 @@ def _default_email():
         ).decode('utf-8')
         return kac_email.rstrip()
     except subprocess.CalledProcessError:
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         return os.environ['USER'] + "@" + DEFAULT_EMAIL_DOMAIN
 
 
@@ -297,7 +297,7 @@ def run_make_hooks():
                                 cwd=_top_level_dir())
         _cli_log_step_indented_info("Ran make hooks successfully")
     except subprocess.CalledProcessError as e:
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         _cli_log_step_indented_info("Failed to run make hooks")
         print("\nError: {}".format(e.output.decode('utf-8')))
 
@@ -331,7 +331,7 @@ def _existing_commit_template(cwd):
         ).decode('utf-8')
         return template.strip()
     except subprocess.CalledProcessError:
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         return None
 
 
@@ -385,7 +385,7 @@ def link_commit_template():
             "The commit template {}".format(tmpl),
             "is not installed, so we can't link it, skipping..."
         )
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         return
 
     all_dirs = _get_submodule_paths()
@@ -409,7 +409,7 @@ def _existing_configs(cwd):
             [line.strip() for line in incl.splitlines()] if incl else []
         )
     except subprocess.CalledProcessError:
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         return []
 
 
@@ -452,7 +452,7 @@ def link_gitconfig_khan():
 
     tmpl = _expanded_home_path('.gitconfig.khan')
     if not os.path.isfile(tmpl):
-        EXIT_CODE = 1
+        SHARED_RET_CODE = 1
         _cli_log_step_indented_info(
             "The git config file {} is not installed, ".format(tmpl) +
             "so we can't include it, skipping..."
