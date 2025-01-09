@@ -579,10 +579,12 @@ if __name__ == '__main__':
 
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
-    format='%(message)s'
+    format = '%(message)s'
     formatter = logging.Formatter(format)
 
-    h1 = logging.NullHandler() if args.quiet else logging.StreamHandler(sys.stdout)
+    h1 = logging.NullHandler() if args.quiet \
+        else logging.StreamHandler(sys.stdout)
+
     h1.setLevel(logging.INFO)
     h1.addFilter(lambda record: record.levelno <= logging.INFO)
     h1.setFormatter(formatter)
