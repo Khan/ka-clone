@@ -577,21 +577,12 @@ if __name__ == '__main__':
     parser = _cli_parser()
     args = parser.parse_args()
 
-    # logger = logging.getLogger("nameOfTheLogger")
-    # ConsoleOutputHandler = logging.StreamHandler()
-    #
-    # logger.addHandler(ConsoleOutputHandler)
-    #
-    # logger.warning("Warning.")
-
     logger = logging.getLogger()
-    # logger.setLevel(logging.DEBUG if args.quiet else logging.INFO)
     logger.setLevel(logging.DEBUG)
     format='%(message)s'
     formatter = logging.Formatter(format)
 
     h1 = logging.NullHandler() if args.quiet else logging.StreamHandler(sys.stdout)
-    # logging.getLogger().setLevel(logging.DEBUG if args.quiet else logging.INFO)
     h1.setLevel(logging.INFO)
     h1.addFilter(lambda record: record.levelno <= logging.INFO)
     h1.setFormatter(formatter)
@@ -601,15 +592,6 @@ if __name__ == '__main__':
     h2.setFormatter(formatter)
     logger.addHandler(h1)
     logger.addHandler(h2)
-    logger.info("info")
-    logger.error("error")
-
-
-    # logging.basicConfig(stream=sys.stdout, format="%(message)s", level=logging.INFO)
-    # logging.basicConfig(stream=sys.stderr, format="%(message)s", level=logging.ERROR)
-    # logging.basicConfig(stream=sys.stdout, level=[logging.DEBUG, logging.INFO])
-    # logging.basicConfig(stream=sys.stdout, level=logging.INFO)
-    # logging.getLogger().setLevel(logging.DEBUG if args.quiet else logging.INFO)
 
     if args.repair:
         if args.src or args.dst:
