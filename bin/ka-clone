@@ -64,7 +64,7 @@ def _cli_parser():
                         '--branch-name-hook',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
                         default=True,
-                        help='prepend commit-msgs with current branch name')
+                        help='label commit-msgs with current branch name')
     parser.add_argument('--commit-msg-lint',
                         '--lint-commit',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
