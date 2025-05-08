@@ -48,6 +48,8 @@ def _cli_parser():
     # NOTE(Lilli): Please make sure that the version is always an integer,
     # as it is used by Repo Rangers in the OLC repo to determine if the
     # version of KA-clone is compatible with the version of OLC.
+    # repo: https://github.com/Khan/our-lovely-cli
+    # file: ./cmd/repo-rangers/ranger-version.ts#L2
 
     # version
     parser.add_argument('--version',
