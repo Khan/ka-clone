@@ -14,14 +14,22 @@ if git config --get user.email | grep -x $SUPERUSERS >/dev/null; then
     exit 0
 fi
 
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+BLUE='\033[0;34m'
+ULINE='\033[4m'
+BOLD='\033[1m'
+NOTBOLD='\033[22m'
 # Each line has the format
 #    <local ref> <sha> <remote ref> <sha>
-# We complain if any remote ref is refs/heads/master
+# We complain if any remote ref is refs/heads/master or refs/heads/main.
 while read local_ref local_sha remote_ref remote_sha; do
-    if [ "$remote_ref" = "refs/heads/master" ]; then
-        echo "FATAL ERROR: You cannot push to the master branch on github."
-        echo "Instead, you must deploy a deploy-branch via Jenkins:"
-        echo "    https://khanacademy.org/r/git-at-ka"
+    if [ "$remote_ref" = "refs/heads/master" ] || [ "$remote_ref" = "refs/heads/main" ]; then
+        branch_name="${remote_ref#refs/heads/}"
+        echo "${RED}FATAL ERROR: You cannot push to the ${BOLD}$branch_name${NOTBOLD} branch on github."
+        echo "Instead, you must follow our pull-request flow for this repo:${NC}"
+        echo "    ${BLUE}${ULINE}https://khanacademy.org/r/gitfaq#id-8f49${NC}\n"
         exit 1
     fi
 done
+
