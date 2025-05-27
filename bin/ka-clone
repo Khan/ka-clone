@@ -80,7 +80,7 @@ def _cli_parser():
     parser.add_argument('--pre-push-lint',
                         '--lint',  # old, obsolete name
                         action=argparse.BooleanOptionalAction,
-                        default=True,
+                        default=False,
                         help='hook up pre-push linting')
     parser.add_argument('--commit-msg-template',
                         '--msg',  # old, obsolete name
