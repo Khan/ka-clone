@@ -26,41 +26,54 @@
 # For emergencies, you can override this hook by using 'git rebase --no-verify'
 
 upstream="$1"
+
 if [ -n "$2" ]; then
    branch="$2"
    branch_name="$2"
 else
    branch=HEAD
-   branch_name=`git rev-parse --abbrev-ref HEAD`
+   branch_name=$(git rev-parse --abbrev-ref HEAD)
 fi
 
-# If there is no origin/master, we can't have a problem, so early-exit.
-# If there's no master, we just exclude checking it.
-if ! git rev-parse origin/master -- >/dev/null 2>&1; then
+# Determine the repo’s default branch (e.g., main or master)
+default_branch_ref=$(git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null)
+default_branch=${default_branch_ref##refs/remotes/origin/}
+
+# If we can't determine the default branch, allow rebase
+if [ -z "$default_branch" ]; then
    exit 0
 fi
 
-if git rev-parse master -- >/dev/null 2>&1; then
-   not_master=^master
+# Ensure origin/<default_branch> exists
+if ! git rev-parse "origin/$default_branch" -- >/dev/null 2>&1; then
+   exit 0
+fi
+
+# If local default_branch exists, exclude it, otherwise skip that filter
+if git rev-parse "$default_branch" -- >/dev/null 2>&1; then
+   not_default_branch="^$default_branch"
 else
-   not_master=
+   not_default_branch=
 fi
 
-will_replay=`git rev-list --pretty=oneline --abbrev-commit ^"$upstream" "$branch" | cut -f1 -d" " | sort`
-will_replay_and_not_in_master=`git rev-list --pretty=oneline --abbrev-commit ^"$upstream" $not_master ^origin/master "$branch" | cut -f1 -d" " | sort`
+# Get the commits that would be replayed by this rebase
+will_replay=$(git rev-list --pretty=oneline --abbrev-commit ^"$upstream" "$branch" | cut -f1 -d" " | sort)
+will_replay_and_not_in_default=$(git rev-list --pretty=oneline --abbrev-commit ^"$upstream" $not_default_branch ^"origin/$default_branch" "$branch" | cut -f1 -d" " | sort)
 
-# Each commit is about 7 chars long, so we take just the first 8 commits.
-will_replay_and_in_master=`comm -23 <(echo "$will_replay") <(echo "$will_replay_and_not_in_master") | head -n8 | xargs`
-# If we are maxed out, indicate there may be more.
-if [ `echo "$will_replay_and_in_master" | wc -w` -eq 8 ]; then
-   will_replay_and_in_master="$will_replay_and_in_master ..."
+# Compare and extract the overlap — commits that are already in the default branch
+will_replay_and_in_default=$(comm -23 <(echo "$will_replay") <(echo "$will_replay_and_not_in_default") | head -n8 | xargs)
+
+# If we hit the head limit, indicate truncation
+if [ "$(echo "$will_replay_and_in_default" | wc -w)" -eq 8 ]; then
+   will_replay_and_in_default="$will_replay_and_in_default ..."
 fi
 
-if [ -n "$will_replay_and_in_master" ]; then
-   echo "Disabling this rebase: it would replay commits that are already in master:"
-   echo "   $will_replay_and_in_master"
-   echo "Try changing to branch '$branch_name' and doing a git push,"
-   echo "and then running this command again."
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
+if [ -n "$will_replay_and_in_default" ]; then
+   echo -e "${RED}❌ Rebase blocked: It would replay commits already present in '$default_branch':"
+   echo -e "   $will_replay_and_in_default${NC}"
+   echo "Try checking out '$branch_name', doing a 'git push', and then rebasing again."
    exit 1
 fi
-
