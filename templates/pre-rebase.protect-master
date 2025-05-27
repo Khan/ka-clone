@@ -68,9 +68,12 @@ if [ "$(echo "$will_replay_and_in_default" | wc -w)" -eq 8 ]; then
    will_replay_and_in_default="$will_replay_and_in_default ..."
 fi
 
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+
 if [ -n "$will_replay_and_in_default" ]; then
-   echo "❌ Rebase blocked: it would replay commits already present in '$default_branch':"
-   echo "   $will_replay_and_in_default"
+   echo -e "${RED}❌ Rebase blocked: It would replay commits already present in '$default_branch':"
+   echo -e "   $will_replay_and_in_default${NC}"
    echo "Try checking out '$branch_name', doing a 'git push', and then rebasing again."
    exit 1
 fi
