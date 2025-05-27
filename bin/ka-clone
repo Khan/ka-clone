@@ -180,6 +180,8 @@ def _default_email():
         ).decode('utf-8')
         return kac_email.rstrip()
     except subprocess.CalledProcessError:
+        # Send to stderr
+        logging.error('** No git email set')
         return os.environ['USER'] + "@" + DEFAULT_EMAIL_DOMAIN
 
 
@@ -307,6 +309,8 @@ def run_make_hooks():
                                 cwd=_top_level_dir())
         _cli_log_step_indented_info("Ran make hooks successfully")
     except subprocess.CalledProcessError as e:
+        # Send to stderr
+        logging.error('** Failed to run make hooks')
         _cli_log_step_indented_info("Failed to run make hooks")
         print("\nError: {}".format(e.output.decode('utf-8')))
 
@@ -340,6 +344,8 @@ def _existing_commit_template(cwd):
         ).decode('utf-8')
         return template.strip()
     except subprocess.CalledProcessError:
+        # Send to stderr
+        logging.error('** Failed to get git config --local commit.template')
         return None
 
 
@@ -393,6 +399,10 @@ def link_commit_template():
             "The commit template {}".format(tmpl),
             "is not installed, so we can't link it, skipping..."
         )
+        # Send to stderr
+        logging.error(
+            '** The commit template {} is not installed'.format(tmpl)
+        )
         return
 
     all_dirs = _get_submodule_paths()
@@ -416,6 +426,8 @@ def _existing_configs(cwd):
             [line.strip() for line in incl.splitlines()] if incl else []
         )
     except subprocess.CalledProcessError:
+        # Send to stderr
+        logging.error('** Failed to get-all git config --local include.path')
         return []
 
 
@@ -458,6 +470,10 @@ def link_gitconfig_khan():
 
     tmpl = _expanded_home_path('.gitconfig.khan')
     if not os.path.isfile(tmpl):
+        # Send to stderr
+        logging.error(
+            '** The git config file {} is not installed'.format(tmpl)
+        )
         _cli_log_step_indented_info(
             "The git config file {} is not installed, ".format(tmpl) +
             "so we can't include it, skipping..."
@@ -573,8 +589,23 @@ if __name__ == '__main__':
     parser = _cli_parser()
     args = parser.parse_args()
 
-    logging.basicConfig(format="%(message)s")
-    logging.getLogger().setLevel(logging.ERROR if args.quiet else logging.INFO)
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+    format = '%(message)s'
+    formatter = logging.Formatter(format)
+
+    h1 = logging.NullHandler() if args.quiet \
+        else logging.StreamHandler(sys.stdout)
+
+    h1.setLevel(logging.INFO)
+    h1.addFilter(lambda record: record.levelno <= logging.INFO)
+    h1.setFormatter(formatter)
+
+    h2 = logging.StreamHandler()
+    h2.setLevel(logging.WARNING)
+    h2.setFormatter(formatter)
+    logger.addHandler(h1)
+    logger.addHandler(h2)
 
     if args.repair:
         if args.src or args.dst:
