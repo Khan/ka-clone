@@ -485,6 +485,10 @@ def _clone_repo(src, dst, quiet=False):
     if dst is None:
         dst = _guess_dst_name(src)
 
+    # Format src as Khan GitHub repo if it's just a simple name
+    if not src.startswith(('git@', 'ssh://', 'http://', 'https://')):
+        src = f'git@github.com:Khan/{src}.git'
+
     cmds = ['git', 'clone']
     # we want the subprocess to be quiet too
     if quiet:
