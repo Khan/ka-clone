@@ -108,6 +108,11 @@ def _cli_parser():
     parser.add_argument('-q', '--quiet',
                         action='store_true',
                         help='silence success messages')
+    parser.add_argument('--depth',
+                        type=int,
+                        metavar='<depth>',
+                        help='create a shallow clone with a history truncated '
+                             'to the specified number of commits')
     return parser
 
 
@@ -477,7 +482,7 @@ def link_gitconfig_khan():
     logging.info("")
 
 
-def _clone_repo(src, dst, quiet=False):
+def _clone_repo(src, dst, quiet=False, depth=None):
     """Clone a git repository. If dst is None, it will be inferred.
 
     Returns the path of the cloned repository.
@@ -489,6 +494,8 @@ def _clone_repo(src, dst, quiet=False):
     # we want the subprocess to be quiet too
     if quiet:
         cmds.append('--quiet')
+    if depth is not None:
+        cmds.append('--depth={}'.format(depth))
     cmds.append(src)
     cmds.append(dst)
 
@@ -501,6 +508,8 @@ def _clone_repo(src, dst, quiet=False):
     if quiet:
         cmds.append('--quiet')
     cmds.extend(['update', '--init', '--recursive'])
+    if depth is not None:
+        cmds.append('--depth={}'.format(depth))
     retcode = subprocess.call(cmds, cwd=dst)
     if retcode != 0:
         sys.exit(retcode)
@@ -586,7 +595,7 @@ if __name__ == '__main__':
             parser.print_help()
             sys.exit(0)
 
-        _dst = _clone_repo(args.src, args.dst, args.quiet)
+        _dst = _clone_repo(args.src, args.dst, args.quiet, args.depth)
         logging.info(
             "Configuring your cloned git repository with KA defaults..."
         )
